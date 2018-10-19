@@ -1,0 +1,109 @@
+---
+title: "RNA-Seq Manuscript Figures"
+output: 
+  pdf_document:
+    citation_package: natbib
+    keep_tex: true
+    fig_caption: true
+    latex_engine: pdflatex
+    template: rmd-latex-ms.tex
+# author:
+# - name: Peng Zhou
+#  affiliation: University of Minnesota
+# - name: Nathan Springer
+#  affiliation: University of Minnesota
+# abstract: "This document provides an introduction to R Markdown, argues for its..."
+# keywords: "pandoc, r markdown, knitr"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+geometry: margin=1in
+fontfamily: mathpazo
+fontsize: 11pt
+# spacing: double
+# bibliography: ~/Dropbox/master.bib
+# biblio-style: apsr
+header-includes:
+- \usepackage{caption}
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage[table]{xcolor}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \captionsetup[figure]{labelformat=empty}
+- \captionsetup[table]{labelformat=empty}
+- \AtBeginDocument{\let\maketitle\relax}
+---
+\pagenumbering{gobble}
+
+![]($briggs/data/41_qc_m/01.readmapping.pdf){width=90%}
+
+Figure S1. Summary of read mapping statistics. For each tissue / genotype combination we show the number of read pairs (in millions) mapped to the maize B73 AGPv4 reference. Color indicates the three biological replicates for each sample and color darkness indicates mapping quality (read pair mapped uniquely - Map_HighQual, read pair mapped multiple times - Map_LowQual, one read of the pair mapped but the other unmapped - Orphan, both reads of the pair unmapped - Unmap).
+
+\pagebreak
+![]($briggs/data/41_qc_m/02.readmapping.prop.pdf){width=100%}
+
+Figure S1b. Summary of read mapping statistics. For each tissue / genotype combination we show the number of read pairs (in millions) mapped to the maize B73 AGPv4 reference, and the proportion of reads that failed QC (failedQC), failed to map to the genome (Unmap), mapped in multiple locations (Map_LowQual), mapped in high quality to intergenic regions (Unassigned) as well as reads assigned to genes.
+
+\pagebreak
+![]($briggs/data/41_qc_m/07.cpm.cor.pdf){width=100%}
+
+Figure S2. Consistency between biology replicates of each sample. Each panel shows a heatmap of the correlations between biological replicates for each tissue-genotype combination.  These show both the Pearson (upper right half) and Spearman (lower left half) correlation values of gene expression levels (FPKMs) between each pair of replicates.  The subset of 14,216 genes with CPM >1 in at least 90% samples were used in this analysis.
+
+\pagebreak
+![]($briggs/data/41_qc_m/08.heatmap.pdf){width=100%}
+
+Figure S2b.  Distance matrix heatmap between all samples.  Pearson correlation coefficients based on gene expression levels (FPKMs) between each pair of samples were shown as a heatmap.  The subset of 14,216 genes with CPM >1 in at least 90% samples were used in this analysis.
+
+\pagebreak
+![]($briggs/data/41_qc_m/09.pca.pdf){width=100%}
+
+Figure S3.  Principal component analysis of gene expression in 23 tissues for B73, Mo17 and the F1 hybrid.  A set of 17,135 genes with CPM >1 in at least 170 out of 204 samples were used for this analysis.  Clustering was done using the log2 transformed CPM values and the “prcomp” function in R with no centering or scaling.  The color indicates the genotypes while the symbols indicate the tissue type (key shown on the left).
+
+\pagebreak
+![]($briggs/data/41_qc_m/12.cpm.den.pdf){width=90%}
+
+Figure S4. The distribution of gene CPM (Counts per Million) values is show for B73, Mo17 and hybrid in each tissue.  The expression values are normalized using the TMM normalization approach implemented in the edgeR (see methods).
+
+\pagebreak
+![]($briggs/data/41_qc_m/15.expressed.pdf){width=90%}
+
+Figure S4b. Number of silent (CPM = 0), lowly-expressed (0<CPM<1) and (moderately) expressed (CPM >= 1) genes for B73, Mo17 and F1 in each tissue.
+
+\pagebreak
+![]($briggs/data/42_de_m/test2.pdf){width=100%}
+
+Figure X. Number of DEGs identified using DESeq2 or edgeR under P-value cutoff of .01 and .5 in each of the 23 tissues.
+
+\pagebreak
+![]($briggs/data/42_de_m/test.pdf){width=100%}
+
+Figure X. Overlap of identified DEGs using DESeq2 or edgeR using P-value cutoff of .01.
+
+\pagebreak
+
+![]($briggs/data/49_coop_m/11.expr.pdf){width=80%}
+
+Figure 1.  Summary of experimental design and data collected for this study.
+
+\pagebreak
+![]($briggs/data/49_coop_m/25.DE.pdf){width=100%}
+
+Figure 2.  Analysis of developmental dynamics of differential expression.
+
+\pagebreak
+![]($briggs/data/49_coop_m/25.Dom.pdf){width=100%}
+
+Figure 3. Classification of non-additive expression patterns. 
+
+\pagebreak
+![]($briggs/data/49_coop_m/25.Dom.sup.pdf){width=100%}
+
+Figure S6. Analysis of additivity patterns for genes that are DE between parents across tissues.  

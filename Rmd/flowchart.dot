@@ -1,0 +1,34 @@
+digraph briggs {
+
+  graph [compound = true, nodesep = .5, ranksep = .25,
+         color = crimson, ordering = out]
+
+  node [fontcolor = darkslategray,
+        shape = rectangle, fixedsize = false, width = 1,
+        style = filled, fillcolor = white, color = darkslategray]
+
+  edge [color = DimGray, arrowhead = normal, arrowtail = none]
+
+  title [label = "Dataset\n23 tissues * 3 genotypes * 3 reps * 39,005 genes", width = 2, fillcolor = "#E64B35B2"]
+  pDE [label = "DE genes", fillcolor = "#4DBBD5B2"]
+  non_pDE [label = "non-DE genes", fillcolor = "#91D1C2B2"]
+  SPE [label = "SPE_B\nSPE_M\nnon-SPE", fillcolor = "#F39B7FB2"]
+  hDE [label = "Below-Parent (BP)\nParent-Like (PL)\nAbove-Parent (AP)", fillcolor = "#91D1C2B2"]
+  Dom [label = "Below Low-Parent (BLP)\nLow-Parent (LP)\nMid-Parent (MP)\nHigh-Parent (HP)\nAbove High-Parent (AHP)", fillcolor = "#4DBBD5B2"]
+  Reg2 [label = "B73-biased\nMo17-biased\nconserved", fillcolor = "#91D1C2B2"]
+  Reg [label = "cis-only\ntrans-only\ncis+trans: same direction\ncis+trans: opposite direction\nunexpected", fillcolor = "#4DBBD5B2"]
+  pDE_test [style = dashed, label = "Test of DE btw. \nB73 and Mo17"]
+  SPE_test [style = dashed, label = "Test of single\n parent expression"]
+  Add_test [style = dashed, label = "Test of \nadditivity"]
+  Reg_test [style = dashed, label = "Test of allelic bias, \ncis/trans regulation"]
+
+  title -> pDE_test [arrowhead = none]
+  pDE_test -> {pDE non_pDE}
+  pDE -> {Add_test Reg_test SPE_test} [arrowhead = none]
+  non_pDE -> {Add_test Reg_test} [arrowhead = none]
+  SPE_test -> {SPE} 
+  Add_test -> {hDE Dom}
+  Reg_test -> {Reg2 Reg}
+
+}
+

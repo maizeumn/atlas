@@ -1,0 +1,42 @@
+---
+title: "Maize trans-eQTL Figures"
+output: 
+  pdf_document:
+    citation_package: natbib
+    keep_tex: true
+    fig_caption: true
+    latex_engine: pdflatex
+    template: rmd-latex-ms.tex
+# author:
+# - name: Peng Zhou
+#  affiliation: University of Minnesota
+# - name: Nathan Springer
+#  affiliation: University of Minnesota
+# abstract: "This document provides an introduction to R Markdown, argues for its..."
+# keywords: "pandoc, r markdown, knitr"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+geometry: margin=1in
+fontfamily: mathpazo
+fontsize: 11pt
+# spacing: double
+# bibliography: ~/Dropbox/master.bib
+# biblio-style: apsr
+---
+
+![Image Title]($data/misc1/li2013/11.pdf){width=100%}
+
+![Image Title]($data/misc2/briggs/59.modules/21.pdf){width=100%}
+
+![DE status for trans-eQTL targets]($data/misc1/li2013/31.de.pdf){width=80%}
+
+![Eigengene for trans-eQTL hotspots (order reflect hierarchical clustering)]($data/misc1/li2013/32.module.eigen.pdf){width=100%}
+
+![log(B/M) for trans-eQTL hotspots (order reflect hierarchical clustering)]($data/misc1/li2013/33.bpr.eigen.pdf){width=100%}
+
+![log(DOA) for trans-eQTL hotspots (order reflect hierarchical clustering)]($data/misc1/li2013/34.doa.eigen.pdf){width=100%}
+
+<!--
+require(rmarkdown) 
+rmarkdown::render("/home/springer/zhoux379/git/luffy/rmd/trans-eQTL.Rmd")
+file.copy("/home/springer/zhoux379/git/luffy/rmd/trans-eQTL.pdf", "/home/springer/zhoux379/git/orionzhou.github.io/docs", overwrite = T)
+-->

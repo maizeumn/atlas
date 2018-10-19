@@ -1,0 +1,61 @@
+---
+title: "RNA-Seq Sample QC"
+output: 
+  pdf_document:
+    citation_package: natbib
+    keep_tex: true
+    fig_caption: true
+    latex_engine: pdflatex
+    template: rmd-latex-ms.tex
+# author:
+# - name: Peng Zhou
+#  affiliation: University of Minnesota
+# - name: Nathan Springer
+#  affiliation: University of Minnesota
+# abstract: "This document provides an introduction to R Markdown, argues for its..."
+# keywords: "pandoc, r markdown, knitr"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+geometry: margin=1in
+fontfamily: mathpazo
+fontsize: 11pt
+# spacing: double
+# bibliography: ~/Dropbox/master.bib
+# biblio-style: apsr
+header-includes:
+- \usepackage{caption}
+- \captionsetup[figure]{labelformat=empty}
+---
+\pagenumbering{gobble}
+
+# Before sample removal
+\pagebreak
+
+![Figure 1. Hierarchical clustering of 219 maize samples. Pearson Correlation Coefficient as distance measure and Ward.D clustering algorithm.]($data/misc2/briggs/41.qc/raw/01.hc.pearson.ward.D.pdf){width=100%}
+
+![Figure 2. Hierarchical clustering of 219 maize samples. Spearman Correlation Coefficient as distance measure and Ward.D clustering algorithm.]($data/misc2/briggs/41.qc/raw/01.hc.spearman.ward.D.pdf){width=100%}
+
+![Figure 3. Correlation of FPKM values between each two replicates for each tissue-genotype combination. Only 14,746 genes with FPKM >= 1 in at least 80% samples were used in this analysis.]($data/misc2/briggs/41.qc/raw/06.fpkm.cor.pdf){width=100%}
+
+![Figure 4. Principle component plot of the maize RNA-Seq expression matrix. The original 39,005 genes were filtered to 14,746 genes that with FPKM >= 1 in at least 176 out of 219 samples.]($data/misc2/briggs/41.qc/raw/01.sample.pca.pdf){width=100%}
+
+\pagebreak
+# After sample removal
+* Too few reads: BR182, BR217
+* PCC with other replicates too low: BR007, BR045, BR147, BR227, BR214, BR202
+\pagebreak
+
+
+
+![Figure 1. Hierarchical clustering of 211 maize samples. Pearson Correlation Coefficient as distance measure and Ward.D clustering algorithm.]($data/misc2/briggs/41.qc/01.hc.pearson.ward.D.pdf){width=100%}
+
+![Figure 2. Hierarchical clustering of 211 maize samples. Spearman Correlation Coefficient as distance measure and Ward.D clustering algorithm.]($data/misc2/briggs/41.qc/01.hc.spearman.ward.D.pdf){width=100%}
+
+![Figure 3. Correlation of FPKM values between each two replicates for each tissue-genotype combination. Only 14,746 genes with FPKM >= 1 in at least 170 (80%) out of 211 samples were used in this analysis.]($data/misc2/briggs/41.qc/06.fpkm.cor.pdf){width=100%}
+
+![Figure 4. Principle component plot of the maize RNA-Seq expression matrix. The original 39,005 genes were filtered to 14,746 genes that with FPKM >= 1 in at least 170 (80%) out of 211 samples.]($data/misc2/briggs/41.qc/01.sample.pca.pdf){width=100%}
+
+<!--
+require(rmarkdown) 
+rmarkdown::render("/home/springer/zhoux379/git/luffy/rmd/sampleQC1.Rmd")
+file.copy("/home/springer/zhoux379/git/luffy/rmd/sampleQC1.pdf", "/home/springer/zhoux379/git/orionzhou.github.io/docs", overwrite = T)
+-->

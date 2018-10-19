@@ -1,0 +1,102 @@
+---
+title: "RNA-Seq Manuscript Supplementary Material"
+output: 
+  pdf_document:
+    citation_package: natbib
+    keep_tex: true
+    fig_caption: true
+    latex_engine: pdflatex
+    template: rmd-latex-ms.tex
+# author:
+# - name: Peng Zhou
+#  affiliation: University of Minnesota
+# - name: Nathan Springer
+#  affiliation: University of Minnesota
+# abstract: "This document provides an introduction to R Markdown, argues for its..."
+# keywords: "pandoc, r markdown, knitr"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+geometry: margin=1in
+fontfamily: mathpazo
+fontsize: 11pt
+# spacing: double
+# bibliography: ~/Dropbox/master.bib
+# biblio-style: apsr
+header-includes:
+- \usepackage{caption}
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage[table]{xcolor}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \captionsetup[figure]{labelformat=empty}
+- \captionsetup[table]{labelformat=empty}
+---
+\pagenumbering{gobble}
+
+\pagebreak
+```{r echo = FALSE}
+require(tidyverse)
+require(knitr)
+require(kableExtra)
+options(knitr.kable.NA = '')
+dirw = '/home/springer/zhoux379/projects/briggs/data/41.qc' 
+ft = file.path(dirw, "00.table.RData")
+load(ft)
+kable(t_sam, format = 'latex', longtable = T, booktabs = T,
+  format.args = list(big.mark = ","), 
+  caption = "Table S1. Samples used in this study.") %>%
+  kable_styling(latex_options = c("repeat_header", "hold_position"), font_size=8)
+```
+
+\pagebreak
+```{r echo = FALSE}
+options(knitr.kable.NA = 0)
+dirw = '/home/springer/zhoux379/projects/briggs/data/49.coop' 
+fx = file.path(dirw, "51.go.enrich.RData")
+load(fx)
+kable(tx, format = 'latex', booktabs = T,
+  caption = "Table S2. Enriched Gene Ontology (GO) terms for identified gene sets.") %>%
+  kable_styling("striped", "hold_position", full_width = F) %>%
+  column_spec(1, bold=T) %>%
+  collapse_rows(columns = 1:2, latex_hline = "major", valign = "top", row_group_label_position = 'stack')
+```
+
+
+\pagebreak
+![Figure S1]($briggs/data/41.qc/01.readmapping.pdf){width=90%}
+
+\pagebreak
+![Figure S2]($briggs/data/41.qc/07.cpm.cor.pdf){width=100%}
+
+\pagebreak
+![Figure S3]($briggs/data/41.qc/09.fpkm.pca.pdf){width=100%}
+
+\pagebreak
+![Figure S4]($briggs/data/41.qc/12.cpm.den.pdf){width=100%}
+
+\pagebreak
+![Figure S5]($briggs/data/49.coop/25.hDE.pdf){width=100%}
+
+\pagebreak
+![Figure S6]($briggs/data/49.coop/25.Dom.sup.pdf){width=100%}
+
+\pagebreak
+![Figure S7]($briggs/data/42.de/15.density.doa.pdf){width=100%}
+
+\pagebreak
+![Figure S8]($briggs/data/49.coop/25.Reg.sup.pdf){width=100%}
+
+\pagebreak
+![Figure S9]($briggs/data/49.coop/25.Reg2.pdf){width=70%}
+
+\pagebreak
+![Figure S10]($briggs/data/49.coop/85.eQTL.pdf){width=100%}

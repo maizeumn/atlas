@@ -1,0 +1,38 @@
+---
+title: "RNA-Seq Manuscript Figures"
+output: 
+  pdf_document:
+    citation_package: natbib
+    keep_tex: true
+    fig_caption: true
+    latex_engine: pdflatex
+    template: rmd-latex-ms.tex
+# author:
+# - name: Peng Zhou
+#  affiliation: University of Minnesota
+# - name: Nathan Springer
+#  affiliation: University of Minnesota
+# abstract: "This document provides an introduction to R Markdown, argues for its..."
+# keywords: "pandoc, r markdown, knitr"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+geometry: margin=1in
+fontfamily: mathpazo
+fontsize: 11pt
+# spacing: double
+# bibliography: ~/Dropbox/master.bib
+# biblio-style: apsr
+header-includes:
+- \usepackage{caption}
+- \captionsetup[figure]{labelformat=empty}
+- \AtBeginDocument{\let\maketitle\relax}
+---
+\pagenumbering{gobble}
+
+![Figure U1]($briggs/data/49.coop/25.Dom.1.pdf){width=100%}
+
+\pagebreak
+![Figure U2]($briggs/data/49.coop/25.Reg.1.pdf){width=100%}
+
+\pagebreak
+![Figure U3]($briggs/data/49.coop/25.Reg.sup.1.pdf){width=100%}
+

@@ -1,0 +1,10 @@
+##PBS -l nodes=1:ppn=1,mem=62gb,walltime=5:00:00
+#PBS -l nodes=1:ppn=24,mem=62gb,walltime=10:00:00
+#PBS -m ae
+#PBS -M zhoux379@umn.edu
+#PBS -q small
+
+cd $briggs/src
+#Rscript --no-init-file --no-restore br.15.de.1.run.r
+Rscript --no-init-file --no-restore br.17.ase.1.r
+##Rscript --no-init-file --no-restore br.18.doa.1.run.r
