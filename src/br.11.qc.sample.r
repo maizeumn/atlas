@@ -272,6 +272,39 @@ fp = sprintf("%s/09.pca.pdf", dirw)
 ggsave(p1, filename = fp, width = 11, height = 10)
 #}}}
 
+#{{{ tSNE
+require(Rtsne)
+tw = tm %>% select(SampleID, gid, CPM) %>% spread(SampleID, CPM)
+t_exp = tm %>% group_by(gid) %>% summarise(n.exp = sum(CPM>=1))
+gids = t_exp %>% filter(n.exp >= (ncol(tw)-1) * .7) %>% pull(gid)
+tt = tw %>% filter(gid %in% gids)
+dim(tt)
+tsne <- Rtsne(t(as.matrix(tt[-1])), dims = 2, perplexity=30, verbose=T, 
+              pca = T, max_iter = 500)
+
+cols23 = c(pal_ucscgb()(23)[c(1:11,13:23)], pal_uchicago()(6))
+tp = as_tibble(tsne$Y) %>%
+    add_column(SampleID = colnames(tt)[-1]) %>%
+    inner_join(th, by = 'SampleID')
+tps = tp %>% mutate(txt = ifelse(Genotype == 'BxM' & Replicate == 1, Tissue, ''))
+p_tsne = ggplot(tp) +
+    geom_text_repel(data=tps, aes(x=V1,y=V2,label=txt), size = 3, alpha = .8) +
+    #geom_text(data = tps, aes(x = V1, y = V2, label = txt), size = 3, check_overlap = T) +
+    geom_point(aes(x = V1, y = V2, shape = Genotype, color = Tissue), size = 1) +
+    stat_ellipse(aes(x = V1, y = V2, fill = Tissue), linetype = 1, alpha = .4) +
+    scale_x_continuous(name = 'tSNE-1') +
+    scale_y_continuous(name = 'tSNE-2') +
+    scale_shape_manual(values = c(15,4,16)) +
+    scale_color_manual(values = cols23) +
+    otheme(legend.pos = 'top.right', legend.dir = 'v',
+           margin = c(.2,.2,.2,.2)) +
+    theme(axis.ticks.length = unit(0, 'lines')) +
+    #theme(panel.border = element_blank()) +
+    guides(color = 'none', shape = guide_legend(ncol = 1, byrow = T)) 
+fp = sprintf("%s/09.tsne.pdf", dirw)
+ggsave(p_tsne, filename = fp, width = 6, height = 6)
+#}}}
+
 #{{{ heatmap
 tps = th %>% select(-Treatment, -paired) %>%
     mutate(Tissue = factor(Tissue, levels = tissues23),

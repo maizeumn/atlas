@@ -39,7 +39,7 @@ tm3 %>% dplyr::count(hDE, Reg2) %>% spread(Reg2, n)
 tm3 = tm3 %>% 
     mutate(Reg1 = as.character(Reg1),
            Reg2 = as.character(Reg2)) %>%
-    mutate(Reg1 = ifelse(!is.na(pDE) & pDE != 'non_DE', Reg1, NA),
+    mutate(Reg1 = ifelse(!is.na(pDE) & pDE != 'non_DE' & abs(log2mb)>=1, Reg1, NA),
            Reg2 = ifelse(!is.na(pDE) & pDE == 'non_DE', Reg2, NA)) %>%
     mutate(Reg1 = factor(Reg1, levels = taglst$Reg1),
            Reg2 = factor(Reg2, levels = taglst$Reg2))

@@ -4,7 +4,8 @@ require(knitr)
 require(kableExtra) 
 dirm = '~/projects/briggs/Rmd'
 getwd()
-rmarkdown::render(file.path(dirm, "rnaseq.r1.Rmd"))
+rmarkdown::render(file.path(dirm, "test.Rmd"))
+#rmarkdown::render(file.path(dirm, "rnaseq.r1.Rmd"))
 #rmarkdown::render(file.path(dirm, "rnaseq.r1.m.Rmd"))
 
 #rmarkdown::render(file.path(dirm, "rnaseq.figure.Rmd"))

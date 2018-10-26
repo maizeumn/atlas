@@ -1,13 +1,11 @@
 #{{{ head
 source("br.fun.r")
-#source("enrich.R")
-dirw = file.path(dirp, "49.coop")
-#setwd(dirw)
-fi = file.path(dirw, "01.master.RData")
+source("enrich.R")
+sid = 'me99b'
+genome = 'B73'
+x = load(file.path(dirg, genome, '55.rda'))
+fi = file.path(dird, '49_coop', "01.master.rda")
 x = load(fi)
-fd = file.path(dirw, "03.sharing.RData")
-x = load(fd)
-tis.prop = 0.5
 # color palettes
 cols.ts = pal_npg()(3)
 cols.expr = pal_npg()(4)
@@ -217,5 +215,44 @@ tx %>% distinct(t.gid)
 tn2 = tn %>% left_join(tx, by = c('r.gid','t.gid'))
 tn2 %>% count(reg)
 #}}}
+
+#{{{ marcon2016 DE comparison
+dirw = file.path(dird, 'marcon2016')
+fi = file.path(dirw, 'marcon2016.tsv')
+ti = read_tsv(fi)
+
+fmap = '~/data/genome/B73/gene_mapping/maize.v3TOv4.geneIDhistory.txt'
+tmap = read_tsv(fmap, col_names = c("gid", "ngid", "note", "method", "type"))
+tmap %>% count(type)
+
+ti2 = ti %>% inner_join(tmap, by = 'gid')
+ti2 %>% count(type)
+
+t_mc = ti2 %>% filter(type == '1-to-1') %>%
+    transmute(gid = ngid, e.b = B73_wd, e.m = Mo17_wd, e.h = B73xMo17_wd) %>%
+    mutate(SPE = ifelse(e.b==1 & e.m==0, 'SPE_B',
+                 ifelse(e.b==0 & e.m==1, 'SPE_M', 'non_SPE'))) %>%
+    mutate(HC = ifelse(SPE == 'SPE_B' & e.h == 1, 'HC_B',
+                ifelse(SPE == 'SPE_M' & e.h == 1, 'HC_M', 'non_HC'))) %>%
+    transmute(gid = gid, mSPE = SPE, mHC = HC)
+t_mc %>% count(mSPE, mHC) %>% mutate(prop = n/sum(n))
+
+#t_br = tm %>% filter(Tissue == 'root_0DAP', gid %in% t_mc$gid) %>% 
+t_br = tm %>% filter(Tissue == 'seedlingroot_11DAS', gid %in% t_mc$gid) %>% 
+    select(gid, silent, SPE, HC) %>%
+    inner_join(t_mc, by = 'gid')
+t_br %>% count(silent, SPE)
+t_br %>% count(mSPE)
+t_br %>% count(SPE, mSPE)
+t_br %>% count(SPE, mSPE) %>% 
+    filter(!is.na(SPE)) %>% mutate(con = SPE==mSPE) %>%
+    group_by(SPE) %>% 
+    summarise(ntot = sum(n), pcon = sum(n[which(con)])/ntot)
+t_br %>% count(SPE, mSPE) %>% 
+    filter(!is.na(SPE)) %>% mutate(con = SPE==mSPE) %>%
+    group_by(mSPE) %>% 
+    summarise(ntot = sum(n), pcon = sum(n[which(con)])/ntot)
+#}}}
+
 
 

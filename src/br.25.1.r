@@ -38,13 +38,17 @@ cols.reg2 = pal_d3()(10)[c(8,6,9)]
 #{{{ num genes w. expression
 #{{{ p1 - blank
 #require(png)
-#require(magick)
+require(magick)
 #require(cowplot)
 #ff = file.path(dirw, "../../Rmd/flowchart.png")
 #img = readPNG(ff)
 #p0 = rasterGrob(img, interpolate=T)
-ff = file.path(dirw, "../../Rmd/flowchart.svg")
-p1 = ggdraw()# + draw_image(ff)
+ff = "http://jeroen.github.io/images/tiger.svg"
+#ff = file.path(dird, "../Rmd/flowchart.svg")
+#p1 = ggdraw() + draw_image(image_read_svg(ff))
+ff = file.path(dird, "../Rmd/flowchart.pdf")
+img = image_read_pdf(ff, density = 300)
+p1 = ggdraw() + draw_image(image_trim(img))
 #}}}
 
 #{{{ p2 - #genes expressed in 0-23 tissues
@@ -140,10 +144,10 @@ write_tsv(te, fo)
 #{{{ create plot
 fo = file.path(dirw, "11.expr.pdf")
 ggarrange(
-    p1,
-    ggarrange(p2, p4, nrow = 1, ncol = 2, widths = c(2,2), labels = c('B', 'C')), 
-    nrow = 2, ncol = 1, labels = "A", heights = c(4,4)) %>% 
-    ggexport(filename = fo, width = 7, height = 6)
+    p1, p_tsne,
+    ggarrange(p2, p4, nrow=1, ncol=2, widths = c(3,2), labels = c('C', 'D')), 
+    nrow = 3, ncol = 1, labels = c("A",'B'), heights = c(4,5,4)) %>% 
+    ggexport(filename = fo, width = 8, height = 10)
 #}}}
 #}}}
 
@@ -217,7 +221,7 @@ p1 = ggplot(tp) +
 #}}}
 
 #{{{ p2: #genes DE/SPE/HC shared in 1-23 tissues
-tsh_d %>% filter(ctag == 'SPE', tag != 'non-SPE', n.tis >= 1)
+tsh_d %>% filter(ctag == 'SPE', tag != 'non-SPE', n.tis >= 10)
 tsh_d %>% filter(ctag == 'SPE', tag != 'non-SPE', n.tis == 23)
 for (ctag1 in ctags) {
     tp = tsh_d %>% filter(ctag == ctag1, n.tis >= 1) %>% 
@@ -260,9 +264,9 @@ for (ctag1 in ctags) {
 p2 = ggarrange(p2a, p2b, nrow = 1, ncol = 2, labels = c("B","C"))
 #}}}
 
-#{{{ ## check 4-FC DE
+#{{{ check 4-FC DE
 gids.de2 = tm %>% filter(!is.na(pDE) & pDE != 'non_DE') %>% distinct(gid) %>% pull(gid)
-tm4 = tm %>% mutate(pDE = ifelse(abs(log2MB) < 2, 'non_DE', pDE))
+tm4 = tm %>% mutate(pDE = ifelse(abs(log2mb) < 2, 'non_DE', pDE))
     tr1 = tm4 %>% mutate(tag = pDE) %>%
         filter(!is.na(tag)) %>%
         group_by(gid, tag) %>%
@@ -280,12 +284,11 @@ tm4 = tm %>% mutate(pDE = ifelse(abs(log2MB) < 2, 'non_DE', pDE))
                                sprintf("mix of %s", "DE_B/DE_M"))) %>%
         ungroup() %>%
         right_join(trs, by = 'gid') %>%
-        replace_na(list(n.tis = 0, tag = tag_fill)) %>%
+        replace_na(list(n.tis = 0, tag = 'nothing')) %>%
         mutate(prop.tis = n.tis / n.tis.tot,
-               tsTag = ifelse(prop.tis == 0, tsTags[1],
-                       ifelse(prop.tis <= 0.2, tsTags[2],
-                       ifelse(prop.tis < 0.8, tsTags[3], tsTags[4]))),
-               ctag = ctag) %>%
+               tsTag = ifelse(prop.tis == 0, 'silent',
+                       ifelse(prop.tis <= 0.2, 'tis-specific',
+                       ifelse(prop.tis < 0.8, 'intermediate', 'constit.')))) %>%
         select(gid, tag, tsTag, n.tis, n.tis.tot, prop.tis)
     tr = tr1 %>% filter(n.tis >= 1) %>% 
         count(n.tis, tag) %>%
@@ -755,7 +758,7 @@ p1 = ggplot(tp) +
 #}}}
 
 #{{{ p2 a-c: composition of MP/LP/HP
-tx1 = tm %>% filter(!is.na(pDE) & pDE != 'non-DE', 
+tx1 = tm %>% filter(!is.na(pDE) & pDE != 'non-DE', abs(log2mb) >= 1,
                     !is.na(SPE), !is.na(Dom)) %>%
     mutate(dtag = Dom) %>%
     select(Tissue, gid, pDE, log2mb, DoA, SPE, dtag)
@@ -766,7 +769,7 @@ tx2 = tx1 %>%
 tx = tx2 %>% mutate(SPE = ifelse(SPE == 'non_SPE', SPE, 'SPE')) %>%
     mutate(DE = ifelse(abs(log2mb) < 2, 'DE2-4',
                 ifelse(abs(log2mb) < 3, 'DE4-8', 'DE8+')))
-tp0 = tx %>% mutate(tag = 'All (DE2+)') %>% select(tag, Tissue, gid, dtag, DoA)
+tp0 = tx %>% mutate(tag = 'All (DE 2+)') %>% select(tag, Tissue, gid, dtag, DoA)
 tp1 = tx %>% mutate(tag = DE) %>% select(tag, Tissue, gid, dtag, DoA)
 tp2 = tx %>% mutate(tag = SPE) %>% select(tag, Tissue, gid, dtag, DoA)
 tp3 = tx %>% left_join(tsyn, by = 'gid') %>% 
@@ -775,8 +778,8 @@ tp3 = tx %>% left_join(tsyn, by = 'gid') %>%
 tp4 = tx %>% left_join(ttf, by = 'gid') %>% 
     replace_na(list(atag='non-TF')) %>%
     mutate(tag = atag) %>% select(tag, Tissue, gid, dtag, DoA)
-tags0 = c("All (DE2+)")
-tags1 = c("DE2-4", "DE4-8", "DE8+")
+tags0 = c("All (DE 2+)")
+tags1 = c("DE1-2", "DE2-4", "DE4-8", "DE8+")
 tags2 = c("SPE", "non_SPE")
 tags3 = c("syntenic", "non-syntenic")
 tags4 = c("TF", "non-TF")
@@ -833,9 +836,9 @@ tp = rbind(tp0, tp1, tp2) %>%
     mutate(dtag = factor(dtag, levels = taglst$Dom))
 tpx = tp %>% group_by(tag) %>% summarise(n.tot = sum(n)) %>%
     mutate(lab = sprintf("%s (%d)", tag, n.tot)) %>% arrange(tag)
-tp = tp %>% left_join(tpx, by = 'tag') %>% mutate(prop = n/n.tot) %>%
-    filter(tag != 'non_SPE')
+tp = tp %>% left_join(tpx, by = 'tag') %>% mutate(prop = n/n.tot) 
 tp %>% select(-n, -n.tot) %>% spread(dtag, prop)
+tp = tp %>% filter(tag != 'non_SPE')
 p2c = ggplot(tp) +
     geom_bar(aes(x = tag, y = prop, fill = dtag), position = position_stack(reverse = T), stat = 'identity', width = 0.8) +
     scale_x_discrete(breaks = tpx$tag, labels = tpx$lab, expand = c(0,0)) +
@@ -902,9 +905,9 @@ tps = tp %>% group_by(n.tis.dom) %>% summarise(ng.tot = sum(ng)) %>%
     mutate(lab = sprintf("%2d (%4d)", n.tis.dom, ng.tot))
 sum(tp %>% filter(n.tis.dom >= 5) %>% pull(ng))
 sum(tp %>% filter(n.tis.dom > 5) %>% pull(ng))/sum(tp %>% filter(n.tis.dom > 0) %>% pull(ng))
-tsd %>% filter(tag %in% c("LP",'BLP'), n.tis >= 2)
-tsd %>% filter(tag %in% c("HP",'AHP'), n.tis >= 2)
-tsd %>% filter(tag %in% dtags) %>% group_by(gid) %>% summarise(n.tis = sum(n.tis)) %>% filter(n.tis >= 2)
+tsd %>% filter(tag %in% c("LP",'BLP'), n.tis >= 2) %>% count(1)
+tsd %>% filter(tag %in% c("HP",'AHP'), n.tis >= 2) %>% count(1)
+tsd %>% filter(tag %in% dtags) %>% group_by(gid) %>% summarise(n.tis = sum(n.tis)) %>% filter(n.tis >= 2) %>% count(1)
 p = ggplot(tp) +
     geom_bar(aes(x = n.tis.dom, y = ng, fill = n.tis.tot), position = 'stack', stat='identity', width=0.7) +
     scale_x_continuous(name = 'Num. non-MP Tissues', breaks = 1:14, expand = c(0.01,0)) +
@@ -1306,7 +1309,7 @@ p2 = ggplot(tp) +
 #{{{ p3 a-e: cis/trans composition
 #{{{
 tx1 = tm %>% 
-    filter(!is.na(pDE) & pDE != 'non_DE', 
+    filter(!is.na(pDE) & pDE != 'non_DE', abs(log2mb) > 1, 
            !is.na(SPE), !is.na(Dom), !is.na(Reg1)) %>%
     filter(Tissue %in% tissues20) %>%
     mutate(Tissue = factor(Tissue, levels = tissues20)) %>%
