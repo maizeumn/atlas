@@ -75,6 +75,9 @@ fo = file.path(dirw, '11.de.dom.rda')
 save(dd, file = fo)
 #}}}
 
+fi = file.path(dirw, '11.de.dom.rda')
+x = load(fi)
+
 #{{{ log2mb distri.
 x_min = -5; x_max = 5; x_itv = .2
 tp = dd %>%
@@ -156,7 +159,6 @@ fo = file.path(dirw, "15.density.doa.pdf")
 ggsave(p1, filename = fo, width = 8, height = 9)
 #}}}
 
-
 #{{{ selected examples of mixed-DE patterns
 gts2 = c("B73", "Mo17")
 tpx = th %>% distinct(Tissue) %>%
@@ -203,4 +205,5 @@ p1 = ggplot(tp) +
 fo = sprintf("%s/31_mixed_de.pdf", dirw)
 ggsave(p1, filename = fo, width = 6, height = 5)
 #}}}
+
 

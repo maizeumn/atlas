@@ -238,8 +238,9 @@ t_mc = ti2 %>% filter(type == '1-to-1') %>%
 t_mc %>% count(mSPE, mHC) %>% mutate(prop = n/sum(n))
 
 #t_br = tm %>% filter(Tissue == 'root_0DAP', gid %in% t_mc$gid) %>% 
-t_br = tm %>% filter(Tissue == 'seedlingroot_11DAS', gid %in% t_mc$gid) %>% 
-    select(gid, silent, SPE, HC) %>%
+tissue1 = 'seedlingroot_11DAS'
+t_br = tm %>% filter(Tissue == tissue1, gid %in% t_mc$gid) %>% 
+    select(gid, B73, Mo17, silent, SPE, HC) %>%
     inner_join(t_mc, by = 'gid')
 t_br %>% count(silent, SPE)
 t_br %>% count(mSPE)
@@ -252,6 +253,34 @@ t_br %>% count(SPE, mSPE) %>%
     filter(!is.na(SPE)) %>% mutate(con = SPE==mSPE) %>%
     group_by(mSPE) %>% 
     summarise(ntot = sum(n), pcon = sum(n[which(con)])/ntot)
+
+gids_b = t_br %>% filter(mSPE=='SPE_B') %>% pull(gid)
+gids_m = t_br %>% filter(mSPE=='SPE_M') %>% pull(gid)
+describe(tm %>% filter(Tissue==tissue1, gid %in% gids_b) %>% pull(log2mb))
+describe(tm %>% filter(Tissue==tissue1, gid %in% gids_m) %>% pull(log2mb))
+
+fo = file.path(dirw, 'marcon.briggs.tsv')
+write_tsv(t_br, fo)
+#}}}
+
+#{{{ gene effect
+fv = '~/projects/wgc/data/05_stats/10.gene.eff.tsv'
+tv = read_tsv(fv) %>% filter(qry == 'B73', tgt == 'Mo17') %>%
+    select(gid, impact, eff)
+
+tx = tm %>% mutate(msilent=ifelse(Mo17<.5, T, F)) %>%
+    group_by(gid) %>%
+    summarise(ne = sum(msilent == F)) %>%
+    mutate(mtag = ifelse(ne<1,'silent',
+                ifelse(ne<=4,'tis-spe',
+                ifelse(ne<20,'int-fre','constit.'))))
+
+tp = tv %>% inner_join(tx, by = 'gid') %>%
+    count(impact, mtag) %>%
+    group_by(impact) %>%
+    mutate(prop = n / sum(n)) %>%
+    select(-n) %>%
+    spread(mtag, prop)
 #}}}
 
 

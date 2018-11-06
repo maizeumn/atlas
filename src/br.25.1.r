@@ -188,6 +188,8 @@ t_num_de = tm %>% filter(!is.na(pDE), pDE != 'non_DE') %>%
     mutate(fc = ifelse(afc < 1, 'd12', ifelse(afc < 2, 'd24',
                 ifelse(afc < 3, 'd48', 'd8')))) %>%
     count(Tissue, pDE, fc)
+t_num_de %>% group_by(Tissue) %>%
+    summarise(prop12 = sum(n[fc=='d12'])/sum(n)) %>% print(n=23)
 t_num_spe = t_num %>% filter(ctag == 'SPE') %>%
     mutate(pDE = ifelse(tag == 'SPE_B', 'DE_B', 'DE_M'),
            fc = 'SPE') %>%
@@ -231,9 +233,10 @@ for (ctag1 in ctags) {
     print(sum(tp$n[tp$n.tis >= 10]))
     xtag = ifelse(ctag1 == 'pDE', 'DE', ctag1)
     xlabel = sprintf("Num. %s Tissues", xtag)
-    tp2 = tp %>% filter(n.tis >= 2) %>%
+    tp2 = tp %>% filter(n.tis >= 3) %>%
         group_by(tag) %>% summarise(n = sum(n)) %>% mutate(p = n/sum(n))
     print(tp2)
+    print(sum(tp2$n))
     p = ggplot(tp) +
         geom_bar(aes(x = n.tis, y = n, fill = tag), position = 'stack', stat='identity', width=0.7) +
         scale_x_continuous(name = xlabel, breaks = c(1,2,5,10,15,20), expand = c(0.01,0)) +
@@ -2270,42 +2273,63 @@ fo = sprintf("%s/91.qc.compm1.pdf", dirw)
 ggsave(p1, filename = fo, width = 5, height = 5)
 #}}}
 
-#{{{# DE heatmap
-tf1 = tf %>% filter(de >= ntis * 0.3)
-th = tm %>% filter(gid %in% tf1$gid) %>%
-    select(Tissue, gid, log2MB) %>%
-    spread(Tissue, log2MB)
+#{{{ DE heatmap
+tissue1 = tissues23[1]
+fo = sprintf("%s/24.DE.heatmap1.pdf", dirw)
+gids_e = tm %>% filter(silent == 0) %>%
+    count(gid) %>%
+    filter(n >= 20) %>% pull(gid)
+td = tm %>% filter(Tissue == tissue1) %>%
+    filter(pDE != 'non_DE', abs(log2mb) >= 1) %>%
+    filter(gid %in% gids_e)
 
+th = tm %>% filter(gid %in% td$gid) %>%
+    select(Tissue, gid, log2mb) %>%
+    mutate(log2mb = pmin(log2mb, 2)) %>%
+    mutate(log2mb = pmax(log2mb, -2)) %>%
+    spread(Tissue, log2mb)
 hdist = daisy(th[,-1], metric = 'gower')
 hdist[is.na(hdist)] = 0
 hcl = hclust(hdist, method = "ward.D")
-gidsO = th$gid[hcl$order]
+tsh_d0 = tsh_d %>% filter(ctag == 'pDE') %>%
+    select(gid, tsTag, mixTag = tag)
+ths = th %>% select(gid) %>%
+    mutate(clu = hcl$order) %>%
+    inner_join(tsh_d0, by = 'gid') %>%
+    arrange(tsTag, mixTag, clu) %>%
+    mutate(y = 1:length(gid))
+ths1 = ths %>% group_by(tsTag) %>%
+    summarise(ymin = min(y), ymax = max(y), y = mean(y)) %>%
+    ungroup()
+ths2 = ths %>% group_by(tsTag, mixTag) %>%
+    summarise(ymin = min(y), ymax = max(y), y = mean(y)) %>%
+    ungroup()
+tt = tibble(tissue = tissues23, x = 1:length(tissues23))
 
 hcl = hclust(daisy(t(th[,-1])), method = "ward.D")
-tissuesO = as.character(tissues)[hcl$order] 
-
 tl = th %>%
-    gather(tissue, log2MB, -gid) %>%
-    mutate(gid = factor(gid, levels = gidsO),
-           tissue = factor(tissue, levels = tissuesO))
-
+    inner_join(ths[,c('gid','y')], by = 'gid') %>% select(-gid) %>%
+    gather(tissue, log2mb, -y) %>%
+    inner_join(tt, by = 'tissue') %>% select(-tissue)
+#
 p1 = ggplot(tl) +
-    geom_tile(aes(x = tissue, y = gid, fill = log2MB)) + 
-    #scale_x_discrete(name = '') +
-    #scale_y_discrete(name = 'Genes') +
-    scale_fill_gradient2(breaks = c(-4, 4), labels = c("B > M", "B < M")) + 
-    theme_bw() +
-    theme(panel.grid = element_blank(), panel.border = element_rect(fill=NA, linetype=0)) +
-    theme(plot.margin = unit(c(0.3,0.3,0.3,0.3), "lines")) +
-    theme(legend.position = 'right', legend.direction = "vertical", legend.justification = c(0.5,0.5)) +
-    theme(legend.title = element_blank(), legend.key.size = unit(0.5, 'lines'), legend.key.width = unit(0.5, 'lines'), legend.text = element_text(size = 7)) +
-    theme(axis.ticks.length = unit(0, 'lines')) +
-    theme(axis.title.x = element_blank()) +
-    theme(axis.title.y = element_blank()) +
-    theme(axis.text.x = element_text(size = 8, colour = "black", angle = -45, hjust = 0)) +
-    theme(axis.text.y = element_blank())
-fo = sprintf("%s/29.de.heatmap.pdf", dirw)
-ggsave(p1, filename = fo, width = 6, height = 12)
+    geom_tile(aes(x = x, y = y, fill = log2mb)) +
+    geom_segment(aes(x = 0, xend = 0, y = 0, yend = max(tl$y)), size = .1) +
+    geom_segment(aes(x = -5, xend = -5, y = 0, yend = max(tl$y)), size = .1) +
+    geom_segment(data = ths2, aes(x = -.2, xend = 0, y = ymin, yend = ymin), size = .2) +
+    geom_segment(data = ths2, aes(x = -.2, xend = 0, y = ymax, yend = ymax), size = .2) +
+    geom_text(data = ths2, aes(x = -.1, y = y, label = mixTag), hjust = 1, size = 2.5) +
+    geom_segment(data = ths1, aes(x = -5.2, xend = -5, y = ymin, yend = ymin), size = .2) +
+    geom_segment(data = ths1, aes(x = -5.2, xend = -5, y = ymax, yend = ymax), size = .2) +
+    geom_text(data = ths1, aes(x = -5.1, y = y, label = tsTag), hjust = 1, size = 2.5) +
+    scale_x_continuous(breaks = tt$x, labels = tt$tissue, limits = c(-10, 23), expand = c(0,0)) +
+    scale_y_continuous(expand = c(0,0)) +
+    scale_fill_gradient2(breaks = c(-1.5, 1.5), labels = c("B > M", "B < M")) + 
+    otheme() +
+    theme(panel.border = element_blank()) +
+    theme(legend.position = 'right', legend.direction = "vertical", legend.justification = c(.5,.5)) +
+    theme(axis.text.x = element_text(size = 8, angle = -45, hjust = 0))
+ggsave(p1, filename = fo, width = 8, height = 12)
 #}}}
 
 #{{{# hDE heatmap
@@ -2344,28 +2368,6 @@ p1 = ggplot(tl) +
     theme(axis.text.y = element_blank())
 fo = sprintf("%s/29.comp.heatmap.pdf", dirw)
 ggsave(p1, filename = fo, width = 6, height = 12)
-#}}}
-
-#{{{# ASE density distribution
-tp = tm %>% filter(BoM, ref + alt >= 30)
-p1 = ggplot(tp) +
-    geom_violin(aes(x = Tissue, y = p.propB, fill = 'Parental Proportion B73'), alpha = 0.5) +
-    geom_violin(aes(x = Tissue, y = h.propB, fill = 'Hybrid Proportion B73'), alpha = 0.5) +
-    geom_hline(yintercept = 0.5, color = 'black', lwd = 0.2) +
-    scale_x_discrete(name = '') +
-    scale_y_continuous(name = 'B73 Allele Proportion', limits=c(0,1)) +
-    scale_fill_brewer(name = 'Direction', palette = "Set1") +
-    theme_bw() +
-    theme(axis.ticks.length = unit(0, 'lines')) +
-    theme(plot.margin = unit(c(0.5,0.5,0.5,0.5), "lines")) +
-    theme(legend.position = 'top', legend.direction = "horizontal", legend.justification = c(0.5,0)) +
-    theme(legend.title = element_blank(), legend.key.size = unit(1, 'lines'), legend.key.width = unit(1, 'lines'), legend.text = element_text(size = 8)) +
-    theme(axis.title.x = element_blank()) +
-    theme(axis.title.y = element_text(size = 9)) +
-    theme(axis.text.x = element_text(size = 8, colour = "black", angle=45, hjust=1)) +
-    theme(axis.text.y = element_text(size = 8, colour = "black", angle = 0))
-fo = file.path(dirw, "35.ase.density.pdf")
-ggsave(p1, filename = fo, width = 12, height = 5)
 #}}}
 
 #{{{# FPKM based tissue similarity
@@ -2412,46 +2414,6 @@ p1 = ggplot(tp) +
   theme(axis.text.y = element_text(size = 8, colour = "black", angle = 0, hjust = 1))
 fp = sprintf("%s/10.pca.FPKM.pdf", dirw)
 ggsave(p1, filename = fp, width = 6, height = 5.5)
-#}}}
-
-#{{{# BoM based similarity
-to = ti
-grp = group_by(to, gid)
-tog = summarise(grp, ntis_de = sum(is.de != 'non-DE'))
-gids = tog$gid[tog$ntis_de >= 1]
-
-to2 = to[to$gid %in% gids, c("Tissue","gid","BoM")]
-to3 = spread(to2, Tissue, BoM)
-to3[is.na(to3)] = 0
-
-e = to3[,-1]
-pca <- prcomp(e, center = F, scale. = F)
-x = pca['rotation'][[1]]
-y = summary(pca)$importance
-y[,1:5]
-xlab = sprintf("PC1 (%.01f%%)", y[2,1]*100)
-ylab = sprintf("PC2 (%.01f%%)", y[2,2]*100)
-tp = cbind.data.frame(Tissue = rownames(x), x[,1:5], stringsAsFactors = F)
-tp$Tissue = factor(tp$Tissue, levels = unique(tl$Tissue))
-
-cols = c(brewer.pal(8, 'Dark2'), brewer.pal(9, 'Set1'))
-
-p1 = ggplot(tp) +
-  geom_point(aes(x = PC1, y = PC2, color = Tissue), size = 4) +
-  geom_text(aes(x = PC1, y = PC2, label = Tissue), size = 3, nudge_y = 0.03, check_overlap = T) +
-  scale_x_continuous(name = xlab) +
-  scale_y_continuous(name = ylab) +
-  scale_color_manual(name = "", values = cols) +
-  theme_bw() +
-  theme(axis.ticks.length = unit(0, 'lines')) +
-  theme(plot.margin = unit(c(0.5,0.5,0.5,0.5), "lines")) +
-  theme(legend.position = 'none') +
-  theme(axis.title.x = element_text(size = 9)) +
-  theme(axis.title.y = element_text(size = 9)) +
-  theme(axis.text.x = element_text(size = 8, colour = "black", angle = 0)) +
-  theme(axis.text.y = element_text(size = 8, colour = "black", angle = 0, hjust = 1))
-fp = sprintf("%s/11.pca.BoM.pdf", dirw)
-ggsave(p1, filename = fp, width = 5.5, height = 5.5)
 #}}}
 
 #{{{# DoA similarity
@@ -2504,41 +2466,8 @@ fp = sprintf("%s/12.pca.DoA.pdf", dirw)
 ggsave(p1, filename = fp, width = 5.5, height = 5.5)
 #}}}
 
-#{{{# DOA - DE
-ti2 = ti[!ti$Tissue %in% c("endosperm_14DAP", "endosperm_27DAP", "kernel_14DAP"),]
-
-grp = group_by(ti2, gid)
-tig = summarise(grp, 
-	ntis_de = sum(is.de != 'non-DE')
-)
-gids = tig$gid[tig$ntis_de >= 1]
-
-ti3 = ti2[ti2$gid %in% gids, c("Tissue","gid","p.propB","is.de","DoA")]
-ti4 = ti3[ti3$is.de != 'non-DE' & !is.na(ti3$p.propB),]
-
-describe(ti4$DoA)
-ti4$DoA[!is.na(ti4$DoA) & ti4$DoA < -2] = -2
-ti4$DoA[!is.na(ti4$DoA) & ti4$DoA > 2] = 2
-
-p1 = ggplot(ti4) +
-  geom_point(aes(x = DoA, y = p.propB), size = 0.5) + 
-  scale_x_continuous(name = 'DoA: (F1-MP)/(HP-MP)') +
-  scale_y_continuous(name = 'Parental B73 Proportion') +
-  #scale_fill_brewer(palette = "Set1") + 
-  theme_bw() +
-  theme(plot.margin = unit(c(0.5,0.5,0.5,0.5), "lines")) +
-  #theme(legend.position = 'right', legend.direction = "vertical", legend.justification = c(0.5,0.5), legend.title = element_blank(), legend.key.size = unit(0.5, 'lines'), legend.key.width = unit(0.5, 'lines'), legend.text = element_text(size = 7)) +
-  theme(axis.ticks.length = unit(0, 'lines')) +
-  theme(axis.title.x = element_text(size = 9)) +
-  theme(axis.title.y = element_text(size = 9)) +
-  theme(axis.text.x = element_text(size = 8)) +
-  theme(axis.text.y = element_text(size = 8))
-fo = sprintf("%s/51.DoA.DE.pdf", dirw)
-ggsave(p1, filename = fo, width = 5, height = 5)
-#}}}
-
 #{{{# snp density v.s. DE 
-fv = '/home/springer/zhoux379/data/genome/Mo17/62.gene.vnt.tsv'
+fv = '~/data/genome/Mo17/62.gene.vnt.tsv'
 tv = read_tsv(fv) %>%
     mutate(vtag = ifelse(nvnt > 0, ifelse(nvnt >= 5, 'vnt', 'svnt'), 'ident'))
 
