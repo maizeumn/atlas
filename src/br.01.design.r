@@ -1,4 +1,4 @@
-source('br.fun.r')
+source("functions.R")
 dirw = file.path(dirp, "01.exp.design")
 
 fi = file.path(dirw, "01.tsv")

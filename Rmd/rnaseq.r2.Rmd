@@ -1,9 +1,9 @@
 ---
 title: "RNA-Seq Manuscript Figures"
-output: 
+output:
   pdf_document:
     citation_package: natbib
-    keep_tex: true
+    keep_tex: false
     fig_caption: true
     latex_engine: pdflatex
     template: rmd-latex-ms.tex
@@ -43,7 +43,7 @@ header-includes:
 ---
 \pagenumbering{gobble}
 
-![]($briggs/data/49_coop/11.expr.pdf){width=100%}
+![]($briggs/data/49_coop/fig1.pdf){width=100%}
 
 Figure 1.  Summary of experimental design and data collected for this study.  (A)  A flow-chart summarizes the  analyses that were performed.  Genes are divided according to whether they show evidence for differential expression (DE) between the two parents, B73 and Mo17 and the subset of genes that exhibit single parent expression (SPE) was then identified.  The additivity of expression for all DE genes was assessed and classified.  A subset of DE genes that include sequence polymorphisms and are expressed at sufficient levels were used to assess and classify cis/trans regulatory variation.  (B) t-SNE visualization of all 204 samples. Log2 transformed CPM values of a set of 17,433 genes expressed (CPM >= 1) in at least 143 (70%) samples were used in this analysis. Principal component analysis (PCA) followed by nearest-neighbor graph-based clustering (t-SNE) was performed to display all samples in 2D space.  The color indicates tissue and the shape indicates genotype.  (C) The numbers of genes that are detected (Counts per Million (CPM) >1 in at least two samples in each tissue) in 0-23 tissues are shown.  Different colors represent the proportion out of all 23 tissues where each gene is expressed: not expressed in any tissue ("Silent"), expressed in less than 20% of tissues (Tissue specific), expressed in 20-80% tissues (Intermediate frequency) and those expressed in more than 80% tissues (Constitutive).  (D) The proportion genes in each expression category (defined in panel C) that are non-syntenic (relative to other grasses including sorghum and rice) or lack any known domains (Interproscan, see methods) were compared to the background gene set (all genes).
 
@@ -75,7 +75,7 @@ tt = tt %>% select(-AssignedRate) %>%
   rename(Sample=SampleID, Rep=Replicate, TotalPairs=TotalReadPair, 
   TrimmedPairs = TrimmedReadPair)
 kable(tt, format = 'latex', longtable = T, booktabs = T,
-  format.args = list(big.mark = ","), 
+  format.args = list(big.mark = ","),
   caption = "Table S1.  Samples used in this study.") %>%
   kable_styling(latex_options = c("repeat_header", "hold_position"), font_size=7.5)
 ```
@@ -117,7 +117,7 @@ Figure S4. The distribution of gene CPM (Counts per Million) values is shown for
 \pagebreak
 ![]($briggs/data/49_coop/24.DE.heatmap1.pdf){width=100%}
 
-Figure S5.  Heatmap showing expression abundance changes between B73 and Mo17 (i.e., log2(Mo17/B73)) of 3,304 genes that are DE (tissue-wise p-value <0.01 and >=2 fold change) in seedling leaf tissue and expressed in at least 20 tissues.  Blue color indicates higher expression in Mo17 while red indicates higher B73 expression.  Gray color indicates missing values where the gene is silent in both B73 and Mo17 in the corresponding tissue.
+Figure S5.  A heatmap is used to visualize expression abundance changes between B73 and Mo17 (i.e., log2(Mo17/B73)) of 3,304 genes that are DE (tissue-wise p-value <0.01 and >=2 fold change) in seedling leaf tissue and expressed in at least 20 tissues.  Blue color indicates higher expression in Mo17 while red indicates higher B73 expression and white indicates no change in expression in B73 relative to Mo17.  Gray color indicates missing values where the gene is silent in both B73 and Mo17 in the corresponding tissue.  The genes were first separated into groups based on whether they exhibit tissue-specific, intermediate frequency or constitutive differential expression (as in Figure 2D) and were then separately clustered.  Within each of these three groups there are genes that exhibit consistently higher expression of B73 (DE_B) or Mo17 (DE_M) as well as some genes that show a mixture of DE_B and DE_M.
 
 \pagebreak
 ![]($briggs/data/49_coop_m/25.DE.pdf){width=100%}

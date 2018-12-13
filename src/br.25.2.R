@@ -1,6 +1,6 @@
 #{{{ head
-source("br.fun.r")
-source("enrich.R")
+source("functions.R")
+source(file.path(dirr, "enrich.R")
 sid = 'me99b'
 genome = 'B73'
 x = load(file.path(dirg, genome, '55.rda'))
@@ -264,23 +264,54 @@ write_tsv(t_br, fo)
 #}}}
 
 #{{{ gene effect
+impacts = c('no_change','modifier','low','moderate','high', 'non-syntenic')
 fv = '~/projects/wgc/data/05_stats/10.gene.eff.tsv'
 tv = read_tsv(fv) %>% filter(qry == 'B73', tgt == 'Mo17') %>%
-    select(gid, impact, eff)
+    select(gid, impact, eff) %>% 
+    mutate(impact = factor(impact, levels = impacts))
+tv %>% count(impact)
 
-tx = tm %>% mutate(msilent=ifelse(Mo17<.5, T, F)) %>%
-    group_by(gid) %>%
-    summarise(ne = sum(msilent == F)) %>%
-    mutate(mtag = ifelse(ne<1,'silent',
-                ifelse(ne<=4,'tis-spe',
-                ifelse(ne<20,'int-fre','constit.'))))
+# vnteff on expression broadth
+tsh_e %>% inner_join(tv, by = 'gid') %>%
+    group_by(impact, etag) %>%
+    summarise(ng = n()) %>%
+    mutate(pg = ng/sum(ng)) %>%
+    select(-ng) %>% spread(etag, pg)
 
-tp = tv %>% inner_join(tx, by = 'gid') %>%
-    count(impact, mtag) %>%
-    group_by(impact) %>%
-    mutate(prop = n / sum(n)) %>%
-    select(-n) %>%
-    spread(mtag, prop)
+# vnteff on DE
+tsh_d %>% filter(ctag == 'pDE') %>% inner_join(tv, by = 'gid') %>%
+    group_by(impact, tsTag) %>%
+    summarise(ng = n()) %>%
+    mutate(pg = ng/sum(ng)) %>%
+    select(-ng) %>% spread(tsTag, pg)
+tsh_d %>% filter(ctag == 'SPE') %>% inner_join(tv, by = 'gid') %>%
+    group_by(impact, tsTag) %>%
+    summarise(ng = n()) %>%
+    mutate(pg = ng/sum(ng)) %>%
+    select(-ng) %>% spread(tsTag, pg)
+tsh_d %>% filter(ctag == 'hDE') %>% inner_join(tv, by = 'gid') %>%
+    group_by(impact, tsTag) %>%
+    summarise(ng = n()) %>%
+    mutate(pg = ng/sum(ng)) %>%
+    select(-ng) %>% spread(tsTag, pg)
+tsh_d %>% filter(ctag == 'pDE') %>% inner_join(tv, by = 'gid') %>%
+    group_by(impact, tag) %>%
+    summarise(ng = n()) %>%
+    mutate(pg = ng/sum(ng)) %>%
+    select(-ng) %>% spread(tag, pg)
+
+# vnteff on additivity
+tsh_r %>% filter(ctag == 'Dom') %>% inner_join(tv, by = 'gid') %>%
+    group_by(impact, tag) %>%
+    summarise(ng = n()) %>%
+    mutate(pg = ng/sum(ng)) %>%
+    select(-ng) %>% spread(tag, pg)
+tsh_r %>% filter(ctag == 'Reg1') %>% inner_join(tv, by = 'gid') %>%
+    group_by(impact, tag) %>%
+    summarise(ng = n()) %>%
+    mutate(pg = ng/sum(ng)) %>%
+    select(-ng) %>% spread(tag, pg)
+
 #}}}
 
 

@@ -62,35 +62,35 @@ get_bic <- function(i, tt) {
     LLr <- function(probb, probm) {
         probh = max(probb, probm)
         if(probb > 0 & probb < 1 & probm > 0 & probm < 1)
-            -sum(dnbinom(xb, size, prob = probb, log = T)) + 
+            -sum(dnbinom(xb, size, prob = probb, log = T)) +
             -sum(dnbinom(xm, size, prob = probm, log = T)) +
             -sum(dnbinom(xh, size, prob = probh, log = T))
         else 100
     }
     LLo <- function(probb, probm, probh) {
         if(probb > 0 & probb < 1 & probm > 0 & probm < 1 & probh > 0 & probh < 1)
-            -sum(dnbinom(xb, size, prob = probb, log = T)) + 
+            -sum(dnbinom(xb, size, prob = probb, log = T)) +
             -sum(dnbinom(xm, size, prob = probm, log = T)) +
             -sum(dnbinom(xh, size, prob = probh, log = T))
         else 100
     }
     nobs = length(xb) + length(xm) + length(xh)
-    fita = mle(LLa, start = list(probb = probb.s, probm = probm.s), 
-          method = "L-BFGS-B", lower = rep(1e-5,2), upper = rep(1-1e-5,3), 
+    fita = mle(LLa, start = list(probb = probb.s, probm = probm.s),
+          method = "L-BFGS-B", lower = rep(1e-5,2), upper = rep(1-1e-5,3),
           nobs = nobs)
-    fitd = mle(LLd, start = list(probb = probb.s, probm = probm.s), 
-          method = "L-BFGS-B", lower = rep(1e-5,2), upper = rep(1-1e-5,3), 
+    fitd = mle(LLd, start = list(probb = probb.s, probm = probm.s),
+          method = "L-BFGS-B", lower = rep(1e-5,2), upper = rep(1-1e-5,3),
           nobs = nobs)
-    fitr = mle(LLr, start = list(probb = probb.s, probm = probm.s), 
-          method = "L-BFGS-B", lower = rep(1e-5,2), upper = rep(1-1e-5,3), 
+    fitr = mle(LLr, start = list(probb = probb.s, probm = probm.s),
+          method = "L-BFGS-B", lower = rep(1e-5,2), upper = rep(1-1e-5,3),
           nobs = nobs)
-    fito = mle(LLo, start = list(probb = probb.s, probm = probm.s, probh = probh.s), 
-          method = "L-BFGS-B", lower = rep(1e-5,3), upper = rep(1-1e-5,3), 
+    fito = mle(LLo, start = list(probb = probb.s, probm = probm.s, probh = probh.s),
+          method = "L-BFGS-B", lower = rep(1e-5,3), upper = rep(1-1e-5,3),
           nobs = nobs)
     #coef(fitc)
     bic = BIC(fita, fitd, fitr, fito)
     bica = bic$BIC[1]; bicd = bic$BIC[2]; bicr = bic$BIC[3]; bico = bic$BIC[4]
-    tb = as_tibble(bic) %>% 
+    tb = as_tibble(bic) %>%
         add_column(mode = c('add','dom','rec','other')) %>% arrange(BIC)
     c('bica'=bica,'bicd'=bicd,'bicr'=bicr,'bico'=bico,'mode'=tb$mode[1])
     #}}}

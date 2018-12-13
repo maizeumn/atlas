@@ -1,4 +1,4 @@
-source("br.fun.r")
+source("functions.R")
 sid = 'me99b'
 #sid = 'me99b.m'
 dirw = file.path(dirp, ifelse(sid == 'me99b.m', '49_coop_m', "49_coop"))

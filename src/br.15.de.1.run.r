@@ -10,8 +10,9 @@ y = load(fm)
 tm = tm %>% inner_join(th[,1:2], by = 'SampleID') %>%
     group_by(Tissue) %>% nest()
 th = th %>% inner_join(tl, by = 'SampleID') %>%
-    select(-paired, -Treatment) %>% 
+    select(-paired, -Treatment) %>%
     group_by(Tissue) %>% nest()
+#dirw = file.path(dird, "42_de_old")
 
 #{{{ run DESeq2 and edgeR
 #res = run_de_test(tm$data[[1]], th$data[[1]])

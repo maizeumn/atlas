@@ -1,11 +1,10 @@
 #{{{ head
-source("br.fun.r")
-source("enrich.R")
+source("functions.R")
 sid = 'me99b'
 #sid = 'me99b.m'
-dirw = file.path(dirp, ifelse(sid == 'me99b.m', '49_coop_m', "49_coop"))
+dirw = file.path(dird, ifelse(sid == 'me99b.m', '49_coop_m', "49_coop"))
 genome = ifelse(sid == 'me99b.m', 'Mo17', 'B73')
-x = load(file.path(dirg, genome, '55.rda'))
+x = load(file.path(genome_dir(), genome, '55.rda'))
 diri = file.path(dirp, ifelse(sid == 'me99b.m', '42_de_m', "42_de"))
 fi = file.path(dirw, "01.master.rda")
 x = load(fi)
@@ -20,7 +19,9 @@ tsyn = read_tsv(fsyn) %>% distinct(gid) %>% add_column(atag = 'syntenic')
 ftf = '~/data/genome/B73/61_functional/06.tf.tsv'
 ttf = read_tsv(ftf) %>% transmute(gid, atag = 'TF')
 # GO
-tdom = tgo %>% filter(ctag %in% c('Interproscan5', 'pannzer')) %>% 
+fgo = '~/data/genome/B73/61_functional/01.go.tsv'
+tgo = read_tsv(fgo)
+tdom = tgo %>% filter(ctag %in% c('Interproscan5', 'pannzer')) %>%
     distinct(gid) %>% add_column(atag = 'domain')
 thom = tgo %>% filter(ctag %in% c('arabidopsis', 'uniprot.plants')) %>%
     distinct(gid) %>% add_column(atag = 'homology')
@@ -38,7 +39,7 @@ cols.reg2 = pal_d3()(10)[c(8,6,9)]
 #{{{ num genes w. expression
 #{{{ p1 - blank
 #require(png)
-require(magick)
+#require(magick)
 #require(cowplot)
 #ff = file.path(dirw, "../../Rmd/flowchart.png")
 #img = readPNG(ff)
@@ -46,9 +47,10 @@ require(magick)
 ff = "http://jeroen.github.io/images/tiger.svg"
 #ff = file.path(dird, "../Rmd/flowchart.svg")
 #p1 = ggdraw() + draw_image(image_read_svg(ff))
-ff = file.path(dird, "../Rmd/flowchart.pdf")
-img = image_read_pdf(ff, density = 300)
-p1 = ggdraw() + draw_image(image_trim(img))
+#ff = file.path(dird, "../Rmd/flowchart.pdf")
+#img = image_read_pdf(ff, density = 300)
+#p1 = ggdraw() + draw_image(image_trim(img))
+p1 = ggdraw()
 #}}}
 
 #{{{ p2 - #genes expressed in 0-23 tissues
@@ -60,8 +62,8 @@ cat("prop. genes silent, constitutive. etc:\n")
 tp %>% group_by(etag) %>% summarise(n = sum(num_genes)) %>% mutate(p=n/sum(n))
 p2 = ggplot(tp) +
     geom_bar(aes(x = n.tis, y = num_genes, fill = etag), stat = 'identity', width = .8) +
-    scale_x_continuous(name = 'Num. Tissues with Expression', expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Num. Genes"), expand = expand_scale(mult=c(0,.03))) +
+    scale_x_continuous(name = 'Number Tissues with Expression', expand=c(0,0)) +
+    scale_y_continuous(name = "Number Genes", expand=expand_scale(mult=c(0,.03))) +
     scale_fill_npg() +
     theme_bw() +
     theme(legend.position = c(0,1), legend.justification = c(0,1)) +
@@ -102,10 +104,10 @@ tjs = list(tsyn, tdom, thom)
 legend.titles = c("Non-syntenic", "w.o. Known Domain", "w.o. Homologs")
 for (i in 1:2) {
     tj = tjs[[i]]
-    legend.title = sprintf("Prop. Genes %s", legend.titles[i])
+    legend.title = sprintf("Prop. Genes %s (%%)", legend.titles[i])
     tp = td %>%
         left_join(tj, by = 'gid') %>% group_by(tag) %>%
-        summarise(ngene = n(), 
+        summarise(ngene = n(),
                   n.na = sum(is.na(atag)),
                   p.na = n.na/ngene * 100) %>% ungroup() %>%
         mutate(p.lab = sprintf("%.0f%%", p.na))
@@ -145,8 +147,8 @@ write_tsv(te, fo)
 fo = file.path(dirw, "11.expr.pdf")
 ggarrange(
     p1, p_tsne,
-    ggarrange(p2, p4, nrow=1, ncol=2, widths = c(3,2), labels = c('C', 'D')), 
-    nrow = 3, ncol = 1, labels = c("A",'B'), heights = c(4,5,4)) %>% 
+    ggarrange(p2, p4, nrow=1, ncol=2, widths = c(3,2), labels = c('C', 'D')),
+    nrow = 3, ncol = 1, labels = c("A",'B'), heights = c(4,5,4)) %>%
     ggexport(filename = fo, width = 8, height = 10)
 #}}}
 #}}}
@@ -200,8 +202,9 @@ tp = t_num_de %>% mutate(pDE = as.character(pDE)) %>%
     spread(fc, n) %>%
     mutate(d4 = d48 +d8, d2 = d24+d4, d1 = d12+d2) %>%
     select(Tissue, pDE, d1,d2,d4,d8,SPE) %>%
-    gather(fc, n, -Tissue, -pDE) 
-#tps = tp0 %>% distinct(pDE, fc, tag) %>% arrange(pDE,fc) 
+    gather(fc, n, -Tissue, -pDE) %>%
+    mutate(Tissue=factor(Tissue,levels=tissues23))
+#tps = tp0 %>% distinct(pDE, fc, tag) %>% arrange(pDE,fc)
 #tp = tp %>% mutate(tag = factor(tag, levels = tps$tag))
 #
 tags = c('DE (All)', 'DE (2+)', 'DE (4+)', 'DE (8+)', 'SPE')
@@ -304,20 +307,20 @@ tm4 = tm %>% mutate(pDE = ifelse(abs(log2mb) < 2, 'non_DE', pDE))
 #}}}
 
 #{{{ p3a: per tissue stats
-ntissue = max(tsh_d$n.tis.tot) 
+ntissue = max(tsh_d$n.tis.tot)
 tis.prop = .5
 tp = tsh_d %>% filter(n.tis.tot >= tis.prop * ntissue, n.tis >= 1) %>%
     filter(ctag %in% c("pDE", "SPE", "HC"))  %>%
-    mutate(ctag = as.character(ctag)) %>% 
+    mutate(ctag = as.character(ctag)) %>%
     mutate(ctag = ifelse(ctag=='pDE', 'DE', ctag)) %>%
     mutate(ctag = factor(ctag, levels = rev(c("DE", "SPE", "HC")))) %>%
     count(ctag, tsTag)
-tps = tp %>% group_by(ctag) %>% summarise(n = sum(n)) %>% 
+tps = tp %>% group_by(ctag) %>% summarise(n = sum(n)) %>%
     mutate(lab = sprintf("%s (%d)", ctag, n))
 p3a = ggplot(tp) +
     geom_bar(aes(x = ctag, y = n, fill = tsTag), position = position_fill(reverse = T), stat='identity', color='white', size=0.1, width = 0.7) +
     scale_x_discrete(breaks = tps$ctag, labels = tps$lab, expand = c(0.01,0)) +
-    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = seq(0,1,by=0.25), oob = rescale_none, expand = c(0.01, 0)) +
+    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = seq(0,1,by=0.25), expand = c(0.01, 0)) +
     coord_flip() +
     scale_fill_npg() +
     theme_bw() +
@@ -329,7 +332,7 @@ p3a = ggplot(tp) +
     theme(plot.margin = unit(c(3.5,.5,.5,1.5), "lines")) +
     theme(axis.title.x = element_text(size = 9)) +
     theme(axis.title.y = element_blank()) +
-    theme(axis.text = element_text(size = 8)) 
+    theme(axis.text = element_text(size = 8))
 #}}}
 
 #{{{ p3: tissue specificity
@@ -472,10 +475,10 @@ tjs = list(tsyn, tdom, thom)
 legend.titles = c("Non-syntenic", "w.o. Known Domain", "w.o. Homologs")
 for (i in 1:3) {
     tj = tjs[[i]]
-    legend.title = sprintf("Prop. Genes %s", legend.titles[i])
+    legend.title = sprintf("Prop. Genes %s (%%)", legend.titles[i])
     tp = td %>%
         left_join(tj, by = 'gid') %>% group_by(ctag, tag) %>%
-        summarise(ngene = n(), 
+        summarise(ngene = n(),
                   n.na = sum(is.na(atag)),
                   p.na = n.na/ngene * 100) %>% ungroup() %>%
         mutate(p.lab = sprintf("%.0f%%", p.na))
@@ -533,7 +536,7 @@ p2 = ggarrange(p2a, p2b, p3, nrow = 1, ncol = 3, labels = c("B","C","D"))
 p4 = ggarrange(ppa, psa, nrow = 1, ncol = 2, labels = c("E","F"))
 p5 =  ggarrange(p5a, p5b, p5c, nrow = 1, ncol = 3, widths = c(3.5,2,2), labels = 'G')
 ggarrange(p1, p2, p4, p5,
-    nrow = 4, ncol = 1, labels = "A", heights = c(4,3,4,2)) %>% 
+    nrow = 4, ncol = 1, labels = "A", heights = c(4,3,4,2)) %>%
     ggexport(filename = fo, width = 9, height = 11)
 #
 fo = file.path(dirw, "25.DE.sup.pdf")
@@ -544,7 +547,7 @@ if(genome == 'Mo17') {
 fo = file.path(dirw, "25.DE.pdf")
 p2 = ggarrange(p2a, p2b, p3, nrow = 1, ncol = 3, labels = c("B","C","D"))
 ggarrange(p1, p2,
-    nrow = 2, ncol = 1, labels = "A", heights = c(4,3)) %>% 
+    nrow = 2, ncol = 1, labels = "A", heights = c(4,3)) %>%
     ggexport(filename = fo, width = 9, height = 6)
 }
 #}}}

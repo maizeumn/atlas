@@ -1,4 +1,4 @@
-source('br.fun.r')
+source("functions.R")
 dirw = file.path(dirp, "03_collect")
 
 #{{{ check sequence paths, create read file for running python pipeline

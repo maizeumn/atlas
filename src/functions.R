@@ -1,38 +1,25 @@
-#{{{ load required libraries, define common variables
-require(grid)
-require(tidyverse)
-require(gtable)
-require(ggtree)
-require(RColorBrewer)
-require(viridis)
-#require(cluster)
-require(Hmisc)
-require(ggsignif)
-require(cowplot)
-require(GGally)
-require(ggridges)
-require(ggpubr)
-require(ggsci)
-require(ggrepel)
-require(scales)
-#require(pheatmap)
-source("circlePlot.R")
-options(stringsAsFactors = F)
-dirr = '~/git/luffy/r'
-source(file.path(dirr, 'plot.R'))
-source('~/projects/maize.expression/src/me.fun.r')
-source('~/projects/genomes/src/ge.fun.r')
-
-dirp = '~/projects/briggs/data'
-dird = '~/projects/briggs/data'
+require(rmaize)
+dirp = '~/projects/briggs'
+dird = file.path(dirp, 'data')
 cols17 = c(brewer.pal(8, 'Dark2'), brewer.pal(9, 'Set1'))
 tissues23 = c("seedlingleaf_11DAS", "blade_v12", "flagleaf_0DAP",
-            "auricle_v12", "sheath_v12", "husk_0DAP", "tasselstem_0DAP", 
-            "internode_v12", "root_0DAP", "silk_0DAP", "floret_0DAP", 
+            "auricle_v12", "sheath_v12", "husk_0DAP", "tasselstem_0DAP",
+            "internode_v12", "root_0DAP", "silk_0DAP", "floret_0DAP",
             "radicle_root", "seedlingroot_11DAS", "tassel_v12", "spikelets_0DAP",
-            "coleoptile_tip", "seedlingmeristem_11DAS", "ear_v14", 
-            "embryo_27DAP", "embryo_imbibedseed", "endosperm_27DAP", 
+            "coleoptile_tip", "seedlingmeristem_11DAS", "ear_v14",
+            "embryo_27DAP", "embryo_imbibedseed", "endosperm_27DAP",
             "kernel_14DAP", "endosperm_14DAP")
+tissues23 = c("seedlingleaf_11DAS", "blade_v12", "flagleaf_0DAP",
+            "husk_0DAP", "sheath_v12", "auricle_v12",
+            "floret_0DAP", "tasselstem_0DAP",
+            "internode_v12",
+            "root_0DAP", "seedlingroot_11DAS", "radicle_root",
+            "coleoptile_tip",
+            "silk_0DAP",
+            "tassel_v12", "spikelets_0DAP", "ear_v14",
+            "seedlingmeristem_11DAS",
+            "embryo_27DAP", "embryo_imbibedseed",
+            "endosperm_27DAP", "kernel_14DAP", "endosperm_14DAP")
 tissues20 = tissues23[1:20]
 tissues2 = c("tasselstem_0DAP", "internode_v12")
 gts = c("B73", "Mo17", 'BxM')
@@ -44,7 +31,6 @@ gts = c("B73", "Mo17", 'BxM')
 #require(WGCNA)
 ##allowWGCNAThreads()
 #enableWGCNAThreads()
-#}}}
 run_de_test <- function(tm1, th1) {
     #{{{
     require(DESeq2)
@@ -97,37 +83,39 @@ run_de_test <- function(tm1, th1) {
     #}}}
     #}}}
     #{{{ DESeq2
-    dds = DESeqDataSetFromMatrix(countData=vm.d, colData=vh.d, design = ~Genotype)
+    dds = DESeqDataSetFromMatrix(countData=vm.d, colData=vh.d, design = ~0+Genotype)
     sizeFactors(dds) = vh$sizeFactor
     dds = estimateDispersions(dds, fitType = 'parametric')
     disp = dispersions(dds)
     #dds = nbinomLRT(dds, reduced = ~ 1)
     dds = nbinomWaldTest(dds)
-    res1 = results(dds, contrast = c("Genotype", "Mo17", "B73"),
-                   pAdjustMethod = "fdr")
-    res2 = results(dds, contrast = c("Genotype", "BxM", "B73"),
-                   pAdjustMethod = "fdr")
-    res3 = results(dds, contrast = c("Genotype", "BxM", "Mo17"),
-                   pAdjustMethod = "fdr")
+    resultsNames(dds)
+    res1 = results(dds, contrast=c(-1,0,1), pAdjustMethod="fdr")
+    res2 = results(dds, contrast=c(-1,1,0), pAdjustMethod="fdr")
+    res3 = results(dds, contrast=c(0,1,-1), pAdjustMethod="fdr")
+    res4 = results(dds, contrast=c(-.5,1,-.5), pAdjustMethod="fdr")
     stopifnot(rownames(res1) == gids)
     stopifnot(rownames(res2) == gids)
     stopifnot(rownames(res3) == gids)
+    stopifnot(rownames(res4) == gids)
     # hvm
     dds = DESeqDataSetFromMatrix(countData=hm.d, colData=hh.d, design = ~ Genotype)
     sizeFactors(dds) = rep(1, nrow(hh))
     dds = DESeq(dds, fitType = 'parametric')
-    res4 = results(dds, contrast = c("Genotype", "Hybrid", "MidParent"),
-                   pAdjustMethod = "fdr")
-    stopifnot(rownames(res4) == gids)
+    resultsNames(dds)
+    res5 = results(dds, contrast=c("Genotype","Hybrid","MidParent"), pAdjustMethod="fdr")
+    stopifnot(rownames(res5) == gids)
     #
     t_ds = tibble(gid = gids, disp = disp,
                 padj.mb = res1$padj, log2mb = res1$log2FoldChange,
                 padj.hb = res2$padj, log2hb = res2$log2FoldChange,
                 padj.hm = res3$padj, log2hm = res3$log2FoldChange,
-                padj.fm = res4$padj, log2fm = res4$log2FoldChange
+                #padj.fm = res4$padj, log2fm = res4$log2FoldChange
+                padj.fm = res5$padj, log2fm = res5$log2FoldChange
                 ) %>%
         replace_na(list(padj.mb = 1, padj.hb = 1, padj.hm = 1, padj.fm = 1))
     #}}}
+    if(FALSE) {
     #{{{ edgeR
     y = DGEList(counts = vm.d, group = vh$Genotype)
     y = calcNormFactors(y, method = 'TMM') #RLE
@@ -185,7 +173,8 @@ run_de_test <- function(tm1, th1) {
         select(log2fm = logFC, padj.fm)
     t_eg = tr1 %>% bind_cols(tr2) %>% bind_cols(tr3) %>% bind_cols(tr5)
     #}}}
-    list(deseq = t_ds, edger = t_eg)
+    }
+    list(deseq = t_ds, edger = '')
     #}}}
 }
 plot_deseq2 <- function(dds, dirw, tissue) {

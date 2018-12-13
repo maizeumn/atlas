@@ -1,4 +1,4 @@
-source("br.fun.r")
+source("functions.R")
 sid = 'me99b'
 #sid = 'me99b.m'
 dirw = file.path(dirp, ifelse(sid == 'me99b.m', '41_qc_m', "41_qc"))
@@ -103,17 +103,22 @@ save(th, t_byrep, file = fo)
 #}}}
 
 #{{{ read data
-diri = '~/projects/maize.expression/data/11_qc'
-fi = file.path(diri, sid, '20.rc.norm.rda')
-y = load(fi)
+diri = '~/projects/rnaseq/data'
+fh = sprintf("%s/05_read_list/%s.c.tsv", diri, sid)
+th = read_tsv(fh)
+fi = file.path(diri, '08_raw_output', sid, 'cpm.rds')
+res = readRDS(fi)
+tl=res$tl; tm = res$tm
+#
 th = th %>%
+    mutate(Tissue=sprintf("%s|%s",Tissue,Treatment)) %>%
     mutate(Genotype = ifelse(Genotype == 'B73xMo17', 'BxM', Genotype)) %>%
     mutate(Genotype = ifelse(Genotype == 'Mo17xB73', 'MxB', Genotype)) %>%
-    filter(Genotype %in% gts)
+    filter(Genotype %in% gts) %>%
+    select(SampleID,Tissue,Genotype,Replicate)
 tl = tl %>% filter(SampleID %in% th$SampleID)
 tm = tm %>% filter(SampleID %in% th$SampleID)
-tiss = unique(th$Tissue); genos = unique(th$Genotype); treas = unique(th$Treatment)
-reps = unique(th$Replicate)
+tiss = unique(th$Tissue); genos = unique(th$Genotype)
 #}}}
 
 #{{{ prepare for hclust and pca 
@@ -279,7 +284,7 @@ t_exp = tm %>% group_by(gid) %>% summarise(n.exp = sum(CPM>=1))
 gids = t_exp %>% filter(n.exp >= (ncol(tw)-1) * .7) %>% pull(gid)
 tt = tw %>% filter(gid %in% gids)
 dim(tt)
-tsne <- Rtsne(t(as.matrix(tt[-1])), dims = 2, perplexity=30, verbose=T, 
+tsne <- Rtsne(t(as.matrix(tt[-1])), dims = 2, perplexity=30, verbose=T,
               pca = T, max_iter = 500)
 
 cols23 = c(pal_ucscgb()(23)[c(1:11,13:23)], pal_uchicago()(6))
@@ -407,31 +412,31 @@ save(tdt, file = fo)
 #{{{# LDA
 require(MASS)
 
-tissue_map = tm$Tissue; names(tissue_map) = tm$SampleID
-geno_map = tm$Genotype; names(geno_map) = tm$SampleID
+gids = tm %>% group_by(gid) %>%
+    summarise(n.sam = sum(CPM>=1)) %>%
+    ungroup() %>% filter(n.sam / nrow(th) >= .7) %>% pull(gid)
+length(gids)
+#
+tw = tm %>% filter(gid %in% gids) %>%
+    dplyr::select(gid, SampleID, CPM) %>%
+    mutate(CPM = asinh(CPM)) %>%
+    spread(gid, CPM) %>%
+    inner_join(th, by = 'SampleID') %>%
+    dplyr::select(SampleID,Genotype,Tissue,everything())
+dim(tw)
+tw[1:5,1:5]
 
-e1 = ti[,-1]
-n_noexp = apply(e1, 1, myfunc <- function(x) sum(x<1))
-idxs = which(n_noexp < 30)
-length(idxs)
-
-tl = asinh(t(ti[idxs,-1]))
-colnames(tl) = ti$gid[idxs]
-tl = data.frame(Tissue = tissue_map[rownames(tl)], Genotype = geno_map[rownames(tl)], tl, stringsAsFactors = F)
-tl[1:5,1:5]
-
-r <- lda(formula = Tissue ~ ., data = tl[,-2])#, prior = c(1,1,1)/3)
-r$svd^2/sum(r$svd^2)
+r <- lda(formula = Tissue ~ ., data = tw[,-c(1:2)])#, prior = c(1,1,1)/3)
 
 r$prior
 r$counts
-#r$means
-#r$scaling
+r$means
+r$scaling
 prop.lda = r$svd^2/sum(r$svd^2)
 prop.lda
 
-plda <- predict(object = r, newdata = tl)
-tp = data.frame(Tissue = tl$Tissue, Genotype = tl$Genotype, lda = plda$x)
+plda = predict(object = r, newdata = tw)
+tp = data.frame(Tissue = tw$Tissue, Genotype = tw$Genotype, lda = plda$x)
 tp$Tissue = factor(tp$Tissue, levels = unique(tp$Tissue))
 tp$Genotype = factor(tp$Genotype, levels = unique(tp$Genotype))
 
@@ -439,19 +444,13 @@ xlab = sprintf("LD1 (%.01f%%)", prop.lda[1]*100)
 ylab = sprintf("LD2 (%.01f%%)", prop.lda[2]*100)
 cols = c(brewer.pal(8, 'Dark2'), brewer.pal(9, 'Set1'))
 
-p1 <- ggplot(tp) + 
+p1 <- ggplot(tp) +
     geom_point(aes(x = lda.LD1, y = lda.LD3, shape = Genotype, color = Tissue)) +
     scale_x_continuous(name = xlab) +
     scale_y_continuous(name = ylab) +
     scale_color_manual(name = "", values = cols) +
-    theme_bw() +
-    theme(axis.ticks.length = unit(0, 'lines')) +
-    theme(plot.margin = unit(c(0.3,0.1,0.1,0.1), "lines")) +
-    theme(legend.position = 'right', legend.direction = "vertical", legend.justification = c(0,0.5), legend.title = element_blank(), legend.key.size = unit(1, 'lines'), legend.key.width = unit(1, 'lines'), legend.text = element_text(size = 8), legend.background = element_rect(fill=NA, size=0)) +
-    theme(axis.title.x = element_text(size = 9)) +
-    theme(axis.title.y = element_text(size = 9)) +
-    theme(axis.text.x = element_text(size = 8, colour = "black", angle = 0)) +
-    theme(axis.text.y = element_text(size = 8, colour = "black", angle = 0, hjust = 1))
+    otheme(legend.pos='right', legend.dir='v',
+        xtext=T, ytext=T)
 fp = sprintf("%s/01.sample.lda.pdf", dirw)
 ggsave(p1, filename = fp, width = 8, height = 7)
 #}}}
