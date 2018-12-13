@@ -1,5 +1,6 @@
 #{{{ head
 source("functions.R")
+library(ggpubr)
 sid = 'me99b'
 #sid = 'me99b.m'
 dirw = file.path(dird, ifelse(sid == 'me99b.m', '49_coop_m', "49_coop"))
@@ -497,9 +498,9 @@ for (i in 1:3) {
         theme(axis.ticks.y = element_blank()) +
         theme(axis.title.x = element_text(size = 9, hjust = .5)) +
         theme(axis.title.y = element_blank()) +
-        theme(axis.text.x = element_text(size = 8)) +
-        theme(axis.text.y = element_text(size = 8, family = 'mono', hjust = 1))
-    if(i != 1) p = p + theme(axis.text.y = element_blank()) 
+        theme(axis.text.x = element_text(size=8)) +
+        theme(axis.text.y = element_text(size=8, family='mono', face='bold'))
+    if(i != 1) p = p + theme(axis.text.y = element_blank())
     if(i == 1) p5a = p
     if(i == 2) p5b = p + theme(plot.margin = unit(c(.5,.1,.5,.1), 'lines'))
     if(i == 3) p5c = p
