@@ -14,7 +14,7 @@ gids = read_tsv(fd, col_names = 'gid') %>% pull(gid)
 
 #{{{ merge data and build master table
 pDEs = c("DE_B", "DE_M", "non_DE")
-tm1 = dd %>% 
+tm1 = dd %>%
     mutate(pDE = ifelse(is.na(tag.mb), NA,
                  ifelse(tag.mb == -1, 'DE_B',
                  ifelse(tag.mb == 1, 'DE_M', 'non_DE')))) %>%
@@ -31,8 +31,8 @@ taglst = list(
     Reg1 = levels(ase$Reg1),
     Reg2 = levels(ase$Reg2)
 )
-tm3 = tm1 %>% 
-    left_join(ase, by = c("Tissue", 'gid')) 
+tm3 = tm1 %>%
+    left_join(ase, by = c("Tissue", 'gid'))
 nrow(tm3)/23
 tm3 %>% dplyr::count(pDE, Reg1) %>% spread(Reg1, n)
 tm3 %>% dplyr::count(hDE, Reg2) %>% spread(Reg2, n)

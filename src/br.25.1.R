@@ -1,6 +1,7 @@
 #{{{ head
 source("functions.R")
 library(ggpubr)
+library(ggridges)
 sid = 'me99b'
 #sid = 'me99b.m'
 dirw = file.path(dird, ifelse(sid == 'me99b.m', '49_coop_m', "49_coop"))
@@ -105,7 +106,7 @@ tjs = list(tsyn, tdom, thom)
 legend.titles = c("Non-syntenic", "w.o. Known Domain", "w.o. Homologs")
 for (i in 1:2) {
     tj = tjs[[i]]
-    legend.title = sprintf("Prop. Genes %s (%%)", legend.titles[i])
+    legend.title = sprintf("Genes %s (%%)", legend.titles[i])
     tp = td %>%
         left_join(tj, by = 'gid') %>% group_by(tag) %>%
         summarise(ngene = n(),
@@ -115,7 +116,7 @@ for (i in 1:2) {
     ymax = max(tp$p.na)
     p = ggplot(tp) +
         geom_bar(aes(x = tag, y = p.na, fill = tag), stat = 'identity', width = .8) +
-        geom_text(aes(x = tag, y = p.na-1, label = p.lab), color = 'white', size = 2.5, vjust = 1) +
+        geom_text(aes(x = tag, y = p.na-1, label = p.lab), color = 'white', size = 2, vjust = 1) +
         scale_x_discrete(breaks = tds$tag, labels = tds$lab, expand = c(.02,0)) +
         scale_y_continuous(name = legend.title, expand = expand_scale(mult=c(0,.03))) +
         scale_fill_manual(values = c(c('gray20', pal_npg()(4)))) +
@@ -145,6 +146,7 @@ write_tsv(te, fo)
 #}}}
 
 #{{{ create plot
+p_tsne = ggdraw()
 fo = file.path(dirw, "11.expr.pdf")
 ggarrange(
     p1, p_tsne,
@@ -158,15 +160,15 @@ ggarrange(
 ctags = c("pDE", "SPE")
 #{{{ stats
 cat("-----pct SPE that are HC-----\n")
-tm %>% count(Tissue, SPE, HC) %>% 
-    filter(!is.na(SPE), SPE!='non_SPE') %>% 
-    group_by(Tissue,SPE) %>% 
-    summarise(prop = n[HC!='non_HC']/sum(n)) %>% 
+tm %>% count(Tissue, SPE, HC) %>%
+    filter(!is.na(SPE), SPE!='non_SPE') %>%
+    group_by(Tissue,SPE) %>%
+    summarise(prop = n[HC!='non_HC']/sum(n)) %>%
     spread(SPE, prop) %>% print(n=23)
 tm %>% #filter(Tissue %in% tissues20) %>%
-    count(SPE, HC) %>% 
-    filter(!is.na(SPE), SPE!='non_SPE') %>% 
-    group_by(1) %>% 
+    count(SPE, HC) %>%
+    filter(!is.na(SPE), SPE!='non_SPE') %>%
+    group_by(1) %>%
     summarise(prop = sum(n[HC!='non_HC'])/sum(n))
 #}}}
 
@@ -213,7 +215,7 @@ p1 = ggplot(tp) +
     geom_point(aes(x = Tissue, y = n, shape = fc, group = pDE, color = pDE), size = 2, position = position_dodge(width=1)) +
     geom_vline(xintercept = seq(1.5, 22.5, by = 1), linetype=2, color='grey60') +
     scale_x_discrete(name = '') +
-    scale_y_continuous(name = 'Num. Genes', limits = c(0,max(tp$n)), expand = expand_scale(mult=c(0,.05))) +
+    scale_y_continuous(name = 'Number Genes', limits = c(0,max(tp$n)), expand = expand_scale(mult=c(0,.05))) +
     scale_shape_manual(values = c(15,24,23,25,19), labels = tags) +
     scale_color_d3(labels = c("B73 higher", "Mo17 higher")) +
     otheme(legend.pos = 'top.center.out', legend.dir = 'h',
@@ -236,7 +238,7 @@ for (ctag1 in ctags) {
     print(sum(tp$n))
     print(sum(tp$n[tp$n.tis >= 10]))
     xtag = ifelse(ctag1 == 'pDE', 'DE', ctag1)
-    xlabel = sprintf("Num. %s Tissues", xtag)
+    xlabel = sprintf("Number %s Tissues", xtag)
     tp2 = tp %>% filter(n.tis >= 3) %>%
         group_by(tag) %>% summarise(n = sum(n)) %>% mutate(p = n/sum(n))
     print(tp2)
@@ -244,7 +246,7 @@ for (ctag1 in ctags) {
     p = ggplot(tp) +
         geom_bar(aes(x = n.tis, y = n, fill = tag), position = 'stack', stat='identity', width=0.7) +
         scale_x_continuous(name = xlabel, breaks = c(1,2,5,10,15,20), expand = c(0.01,0)) +
-        scale_y_continuous(name = "Num. Genes", expand = c(0.02, 0)) +
+        scale_y_continuous(name = "Number Genes", expand = c(0.02, 0)) +
         scale_fill_manual(values = cols.mix3) +
         facet_wrap(~fac, scales='free') +
         theme_bw() +
@@ -321,7 +323,7 @@ tps = tp %>% group_by(ctag) %>% summarise(n = sum(n)) %>%
 p3a = ggplot(tp) +
     geom_bar(aes(x = ctag, y = n, fill = tsTag), position = position_fill(reverse = T), stat='identity', color='white', size=0.1, width = 0.7) +
     scale_x_discrete(breaks = tps$ctag, labels = tps$lab, expand = c(0.01,0)) +
-    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = seq(0,1,by=0.25), expand = c(0.01, 0)) +
+    scale_y_continuous(name = sprintf("Proportion Genes"), breaks = seq(0,1,by=0.25), expand = c(0.01, 0)) +
     coord_flip() +
     scale_fill_npg() +
     theme_bw() +
@@ -390,16 +392,16 @@ for (ctag1 in names(clist)) {
     tp1 = tp0 %>% count(ntis.exp, ptis.tag)
     tpm = tp0 %>% count(ntis.exp, mtag)
     tp1 %>% filter(ntis.exp == 3) %>% mutate(prop = n/sum(n)) %>% print(n = 20)
-    tps1 = tp1 %>% group_by(ntis.exp) %>% 
+    tps1 = tp1 %>% group_by(ntis.exp) %>%
         summarise(ng.tot = sum(n)) %>% ungroup() %>%
         mutate(lab = sprintf("%2d (%4d)", ntis.exp, ng.tot))
-    tpsm = tpm %>% group_by(ntis.exp) %>% 
+    tpsm = tpm %>% group_by(ntis.exp) %>%
         summarise(ng.tot = sum(n)) %>% ungroup() %>%
         mutate(lab = sprintf("%2d (%4d)", ntis.exp, ng.tot))
-    pm = ggplot(tpm) + 
-        geom_bar(aes(x = ntis.exp, y = n, fill = mtag), position = position_fill(reverse = T), stat = 'identity', width = 0.8) + 
-        scale_x_continuous(name = 'Num. Expressed Tissues', breaks = tpsm$ntis.exp, labels = tpsm$lab, expand = c(0,0)) +
-        scale_y_continuous(name = 'Prop. Genes', expand = c(0,0)) +
+    pm = ggplot(tpm) +
+        geom_bar(aes(x = ntis.exp, y = n, fill = mtag), position = position_fill(reverse = T), stat = 'identity', width = 0.8) +
+        scale_x_continuous(name = 'Number Expressed Tissues', breaks = tpsm$ntis.exp, labels = tpsm$lab, expand = c(0,0)) +
+        scale_y_continuous(name = 'Proportion Genes', expand = c(0,0)) +
         scale_fill_npg() +
         coord_flip() +
         theme_bw() +
@@ -409,19 +411,19 @@ for (ctag1 in names(clist)) {
         #theme(legend.margin = margin(0,0,0,0, unit='pt')) +
         theme(panel.grid = element_blank()) +
         theme(plot.margin = unit(c(1.5,.5,.5,.5), "lines")) +
-        theme(axis.title.x = element_text(size = 9)) +
-        theme(axis.title.y = element_text(size = 9)) +
-        theme(axis.text.x = element_text(size = 8, color = "black", angle = 0)) +
-        theme(axis.text.y = element_text(size = 8, color = "black", angle = 0))
+        theme(axis.title.x = element_text(size=9)) +
+        theme(axis.title.y = element_text(size=9)) +
+        theme(axis.text.x = element_text(size=8)) +
+        theme(axis.text.y = element_text(size=8))
     ncolor = length(unique(tp1$ptis.tag))
     cols21 = c('gray80', viridis_pal(direction = -1)(20))
     ntiss = as.character(sort(unique(tp1$ptis.tag)))
     tp1 = tp1 %>% mutate(ptis.tag = factor(as.character(ptis.tag), levels = rev(ntiss)))
-    title.1 = sprintf("Prop. Tissues %s", otag)
-    pa = ggplot(tp1) + 
+    title.1 = sprintf("Proportion Tissues %s", otag)
+    pa = ggplot(tp1) +
         geom_bar(aes(x = ntis.exp, y = n, fill = ptis.tag), position = position_fill(), stat = 'identity', width = .8) + 
-        scale_x_continuous(name = 'Num. Expressed Tissues', breaks = tps1$ntis.exp, labels = tps1$lab, expand = c(0,0)) +
-        scale_y_continuous(name = 'Prop. Genes', expand = c(0,0)) +
+        scale_x_continuous(name = 'Number Expressed Tissues', breaks = tps1$ntis.exp, labels = tps1$lab, expand = c(0,0)) +
+        scale_y_continuous(name = 'Proportion Genes', expand = c(0,0)) +
         scale_fill_manual(name = title.1, values = rev(cols21), breaks = itv.labs.all[seq(1,21,by=5)]) +
         coord_flip() +
         theme_bw() +
@@ -433,10 +435,10 @@ for (ctag1 in names(clist)) {
         #theme(legend.margin = margin(0,0,0,0, unit='pt')) +
         theme(panel.grid = element_blank()) +
         theme(plot.margin = unit(c(2.3,.5,.5,.5), "lines")) +
-        theme(axis.title.x = element_text(size = 9)) +
-        theme(axis.title.y = element_text(size = 9)) +
-        theme(axis.text.x = element_text(size = 8, color = "black", angle = 0)) +
-        theme(axis.text.y = element_text(size = 8, color = "black", angle = 0))
+        theme(axis.title.x = element_text(size=9)) +
+        theme(axis.title.y = element_text(size=9)) +
+        theme(axis.text.x = element_text(size=8)) +
+        theme(axis.text.y = element_text(size=8))
     if(ctag1 == 'pDE') {ppa = pa; ppm = pm}
     if(ctag1 == 'SPE') {psa = pa; psm = pm}
     if(ctag1 == 'HC') {pha = pa; phm = pm}
@@ -460,10 +462,10 @@ tr = tsh_d %>% filter(n.tis.tot >= 10, tsTag != 'No data', ctag %in% ctags) %>%
 ctags1 = unique(tr$ctag)
 tra = tr %>% mutate(tag = 'All')
 trb = tr %>% filter(tag == 'Constitutive')
-tr = rbind(tra, trb) %>% 
+tr = rbind(tra, trb) %>%
     mutate(ctag = factor(ctag, levels = ctags1)) %>%
     arrange(ctag, tag) %>%
-    mutate(tag = sprintf("%s|%12s", ctag, tag)) 
+    mutate(tag = sprintf("%s|%12s", ctag, tag))
 tags = c(unique(tc$tag), unique(tr$tag))
 td = rbind(tc, tr)
 ctags = unique(td$ctag)
@@ -476,7 +478,7 @@ tjs = list(tsyn, tdom, thom)
 legend.titles = c("Non-syntenic", "w.o. Known Domain", "w.o. Homologs")
 for (i in 1:3) {
     tj = tjs[[i]]
-    legend.title = sprintf("Prop. Genes %s (%%)", legend.titles[i])
+    legend.title = sprintf("Genes %s (%%)", legend.titles[i])
     tp = td %>%
         left_join(tj, by = 'gid') %>% group_by(ctag, tag) %>%
         summarise(ngene = n(),
@@ -572,7 +574,7 @@ tsh_d %>% filter(ctag == 'hDE', n.tis >= 1) %>% distinct(gid) %>% count(1)
 p1 = ggplot(tp) +
     geom_bar(aes(x = Tissue, y = ngene, fill = tag), position = position_stack(reverse = T), stat = 'identity', width = 0.8) +
     scale_x_discrete(breaks = tps$Tissue, labels = tps$lab, expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Num. Genes"), expand = expand_scale(mult=c(0,.03))) +
+    scale_y_continuous(name = sprintf("Number Genes"), expand = expand_scale(mult=c(0,.03))) +
     scale_fill_d3()+
     coord_flip() +
     theme_bw() +
@@ -581,12 +583,13 @@ p1 = ggplot(tp) +
     theme(legend.position = c(1,1), legend.justification=c(1,0), legend.background = element_blank()) +
     guides(direction = 'vertical', fill = guide_legend(nrow = 1, byrow = F)) +
     theme(legend.title = element_blank(), legend.key.size = unit(0.8, 'lines'), legend.text = element_text(size = 8)) +
+    theme(axis.title.x = element_text(size=9)) +
     theme(axis.title.y = element_blank())
 
 p1b = ggplot(tp) +
     geom_point(aes(x = Tissue, y = ngene, group = tag, color = tag, shape = tag), size = 2) +
     scale_x_discrete(breaks = tps$Tissue, labels = tps$lab) +
-    scale_y_continuous(name = 'Num. Genes', expand = expand_scale(mult=c(0,.05))) +
+    scale_y_continuous(name = 'Number Genes', expand = expand_scale(mult=c(0,.05))) +
     scale_shape_manual(values = c(16, 4)) +
     scale_color_d3() +
     theme_bw() +
@@ -597,7 +600,7 @@ p1b = ggplot(tp) +
     theme(panel.grid.minor = element_blank()) +
     theme(panel.grid.major.x = element_line(linetype='dashed')) +
     theme(axis.title.x = element_blank()) +
-    theme(axis.text.x = element_text(size = 8, angle = 45, hjust = 1)) 
+    theme(axis.text.x = element_text(size = 8, angle = 45, hjust = 1))
 #}}}
 
 #{{{ p2
@@ -613,8 +616,8 @@ print(tp2)
 ymax = max(tp %>% group_by(n.tis) %>% summarise(n=sum(n)) %>% pull(n)) * 1.05
 p2 = ggplot(tp) +
     geom_bar(aes(x = n.tis, y = n, fill = tag), position = 'stack', stat='identity', width=0.7) +
-    scale_x_continuous(name = 'Num. Tissues', breaks = seq(1,10,by=1), expand = c(0.01,0)) +
-    scale_y_continuous(name = "Num. Genes", limits = c(0,ymax), expand = c(0,0)) +
+    scale_x_continuous(name = 'Number Tissues', breaks = seq(1,10,by=1), expand = c(0.01,0)) +
+    scale_y_continuous(name = "Number Genes", limits = c(0,ymax), expand = c(0,0)) +
     scale_fill_manual(values = cols.mix3) +
     theme_bw() +
     theme(legend.position = c(1,1), legend.justification=c(1,1), legend.background = element_blank()) +
@@ -689,14 +692,14 @@ write_tsv(te, fo)
 #{{{ plot
 fo = file.path(dirw, "25.hDE.pdf")
 ggarrange(p1, p2, p3, p4,
-    nrow = 2, ncol = 2, labels = LETTERS[1:4], heights = c(3,2)) %>% 
+    nrow = 2, ncol = 2, labels = LETTERS[1:4], heights = c(3,2)) %>%
     ggexport(filename = fo, width = 8, height = 6)
 #}}}
 #}}}
 
 #{{{ sum of Dom
 #{{{
-ntissue = max(tsh_r$n.tis.tot) 
+ntissue = max(tsh_r$n.tis.tot)
 de.prop = .25
 doms = taglst$Dom
 listd = list("LP/BLP" = c("LP", "BLP"), "HP/AHP" = c("HP", "AHP"))
@@ -721,9 +724,9 @@ txd = tsd %>% filter(n.tis.tot >= 0 * ntissue) %>%
     group_by(gid, n.tis.tot, tag) %>%
     summarise(n.tis = sum(n.tis)) %>% ungroup() %>%
     spread(tag, n.tis) %>%
-    replace_na(list(LP=0,HP=0,MP=0)) %>% 
+    replace_na(list(LP=0,HP=0,MP=0)) %>%
     mutate(tag = ifelse(LP > 0 & HP > 0, 'mix of HP/LP',
-                 ifelse(LP > 0, 'consis. LP/BLP', 
+                 ifelse(LP > 0, 'consis. LP/BLP',
                  ifelse(HP > 0, 'consis. HP/AHP', 'consis. MP')))) %>%
     mutate(tag = factor(tag, levels = tags.mix.d))
 txd %>% filter(n.tis.tot >= 5) %>% filter(HP >= 2)
@@ -740,9 +743,9 @@ tz = tnd %>% group_by(Tissue) %>%
 tnd %>% group_by(tag) %>% summarise(n=sum(ngene)) %>% mutate(p=n/sum(n))
 #
 tz %>% group_by(1) %>%
-    summarise(p.add.l=min(p.add), p.add.m=max(p.add), 
+    summarise(p.add.l=min(p.add), p.add.m=max(p.add),
               p.dom.l=min(p.dom), p.dom.m=max(p.dom),
-              p.odom.l=min(p.odom), p.odom.m=max(p.odom)) 
+              p.odom.l=min(p.odom), p.odom.m=max(p.odom))
 tp = tnd %>% 
     mutate(tag = factor(tag, levels = taglst$Dom))
 tps = tp %>% group_by(Tissue) %>% summarise(ng.tot = sum(ngene)) %>%
@@ -751,7 +754,7 @@ tps = tp %>% group_by(Tissue) %>% summarise(ng.tot = sum(ngene)) %>%
 p1 = ggplot(tp) +
     geom_bar(aes(x = Tissue, y = ngene, fill = tag), position = position_stack(reverse = T), stat = 'identity', width = 0.8) +
     scale_x_discrete(breaks = tps$Tissue, labels = tps$lab, expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Num. Genes"), expand = expand_scale(mult=c(0,.03))) +
+    scale_y_continuous(name = sprintf("Number Genes"), expand = expand_scale(mult=c(0,.03))) +
     scale_fill_manual(values = cols.dom)+
     coord_flip() +
     theme_bw() +
@@ -770,19 +773,19 @@ tx1 = tm %>% filter(!is.na(pDE) & pDE != 'non-DE', abs(log2mb) >= 1,
     mutate(dtag = Dom) %>%
     select(Tissue, gid, pDE, log2mb, DoA, SPE, dtag)
 sum(is.na(tx1$dtag))
-tx2 = tx1 %>% 
+tx2 = tx1 %>%
     filter(Tissue %in% tissues20) %>%
-    mutate(Tissue = factor(Tissue, levels = tissues20)) 
+    mutate(Tissue = factor(Tissue, levels = tissues20))
 tx = tx2 %>% mutate(SPE = ifelse(SPE == 'non_SPE', SPE, 'SPE')) %>%
     mutate(DE = ifelse(abs(log2mb) < 2, 'DE2-4',
                 ifelse(abs(log2mb) < 3, 'DE4-8', 'DE8+')))
 tp0 = tx %>% mutate(tag = 'All (DE 2+)') %>% select(tag, Tissue, gid, dtag, DoA)
 tp1 = tx %>% mutate(tag = DE) %>% select(tag, Tissue, gid, dtag, DoA)
 tp2 = tx %>% mutate(tag = SPE) %>% select(tag, Tissue, gid, dtag, DoA)
-tp3 = tx %>% left_join(tsyn, by = 'gid') %>% 
+tp3 = tx %>% left_join(tsyn, by = 'gid') %>%
     replace_na(list(atag='non-syntenic')) %>%
     mutate(tag = atag) %>% select(tag, Tissue, gid, dtag, DoA)
-tp4 = tx %>% left_join(ttf, by = 'gid') %>% 
+tp4 = tx %>% left_join(ttf, by = 'gid') %>%
     replace_na(list(atag='non-TF')) %>%
     mutate(tag = atag) %>% select(tag, Tissue, gid, dtag, DoA)
 tags0 = c("All (DE 2+)")
@@ -802,7 +805,7 @@ lstd = list(tp11, tp21)
 doa_min = -3
 doa_max = 3
 for (i in 1:length(lstd)) {
-    tp = lstd[[i]] %>% 
+    tp = lstd[[i]] %>%
         mutate(DoA = ifelse(DoA < doa_min, doa_min, DoA)) %>%
         mutate(DoA = ifelse(DoA > doa_max, doa_max, DoA))
     pr = ggplot(tp) +
@@ -837,7 +840,7 @@ for (i in 1:length(lstd)) {
     if(i == 2) p2b = p
 }
 #
-tp = rbind(tp0, tp1, tp2) %>% 
+tp = rbind(tp0, tp1, tp2) %>%
     count(tag, dtag) %>%
     mutate(tag = factor(tag, levels = rev(tags))) %>%
     mutate(dtag = factor(dtag, levels = taglst$Dom))
@@ -849,7 +852,7 @@ tp = tp %>% filter(tag != 'non_SPE')
 p2c = ggplot(tp) +
     geom_bar(aes(x = tag, y = prop, fill = dtag), position = position_stack(reverse = T), stat = 'identity', width = 0.8) +
     scale_x_discrete(breaks = tpx$tag, labels = tpx$lab, expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = seq(0,1,by=0.25), oob = rescale_none, expand = c(0, 0)) +
+    scale_y_continuous(name = sprintf("Proportion Genes"), breaks = seq(0,1,by=0.25), expand=c(0,0)) +
     coord_flip() +
     scale_fill_manual(values = cols.dom) +
     theme_bw() +
@@ -863,7 +866,7 @@ p2c = ggplot(tp) +
     theme(axis.title.y = element_blank())
 #}}}
 
-#{{{ p3: #non-MP genes per DE category 
+#{{{ p3: #non-MP genes per DE category
 dtags = c("HP","AHP",'LP','BLP')
 dtag = "HP/AHP/LP/BLP"
 tp = tsd %>% mutate(tag = as.character(tag)) %>%
@@ -875,8 +878,8 @@ tps = tp %>% group_by(n.tis.tot) %>% summarise(ng.tot = sum(n)) %>%
     mutate(lab = sprintf("%2d (%4d)", n.tis.tot, ng.tot))
 p = ggplot(tp) +
     geom_bar(aes(x = n.tis.tot, y = n, fill = tag), position = 'stack', stat='identity', width=0.7) +
-    scale_x_continuous(name = 'Num. DE Tissues', breaks = c(1,2,5,10,15,20), expand = c(0.01,0)) +
-    scale_y_continuous(name = "Num. Genes", expand = c(0.02, 0)) +
+    scale_x_continuous(name = 'Number DE Tissues', breaks = c(1,2,5,10,15,20), expand = c(0.01,0)) +
+    scale_y_continuous(name = "Number Genes", expand = c(0.02, 0)) +
     scale_fill_d3() +
     facet_wrap(~fac, scales='free') +
     theme_bw() +
@@ -890,7 +893,7 @@ p = ggplot(tp) +
     theme(axis.title.x = element_text(size = 9)) +
     theme(axis.title.y = element_text(size = 9)) +
     theme(axis.text.x = element_text(size = 8, color = "black")) +
-    theme(axis.text.y = element_text(size = 8, color = 'black')) 
+    theme(axis.text.y = element_text(size = 8, color = 'black'))
 gt = ggplotGrob(p)
 N <- tp %>% group_by(fac) %>% summarise(count = length(unique(n.tis.tot))) %>% `[[`(2)
 panelI <- gt$layout$l[grepl("panel", gt$layout$name)]
@@ -917,9 +920,9 @@ tsd %>% filter(tag %in% c("HP",'AHP'), n.tis >= 2) %>% count(1)
 tsd %>% filter(tag %in% dtags) %>% group_by(gid) %>% summarise(n.tis = sum(n.tis)) %>% filter(n.tis >= 2) %>% count(1)
 p = ggplot(tp) +
     geom_bar(aes(x = n.tis.dom, y = ng, fill = n.tis.tot), position = 'stack', stat='identity', width=0.7) +
-    scale_x_continuous(name = 'Num. non-MP Tissues', breaks = 1:14, expand = c(0.01,0)) +
-    scale_y_continuous(name = "Num. Genes", expand = c(0.02, 0)) +
-    scale_fill_viridis(name = 'Num. DE Tissues', breaks = c(1,2,5,10,15,20), direction = -1) +
+    scale_x_continuous(name = 'Number non-MP Tissues', breaks = 1:14, expand = c(0.01,0)) +
+    scale_y_continuous(name = "Number Genes", expand = c(0.02, 0)) +
+    scale_fill_viridis(name = 'Number DE Tissues', breaks = c(1,2,5,10,15,20), direction = -1) +
     facet_wrap(~fac, scales='free') +
     theme_bw() +
     theme(legend.position = c(1,1), legend.justification=c(1,1), legend.background = element_blank()) +
@@ -945,13 +948,13 @@ tsd %>% filter(n.tis.tot >= de.prop * ntissue) %>% distinct(gid) %>% count(1)
 tp = tsd %>% filter(n.tis.tot >= de.prop * ntissue) %>%
     filter(! tag %in% c("PD_H", "PD_L"))
 tp %>% group_by(tag) %>% summarise(prop.tis.mean = mean(prop.tis))
-tps = tp %>% count(tag) %>% 
+tps = tp %>% count(tag) %>%
     mutate(lab = sprintf("%s (%d)", tag, n)) %>%
     arrange(desc(tag))
 p5a = ggplot(tp) +
     geom_boxplot(aes(x = tag, y = prop.tis, fill = tag), notch = T, outlier.size = 1, width = .8) +
     scale_x_discrete(breaks = tps$tag, labels = tps$lab, expand = c(0,.5)) +
-    scale_y_continuous(name = 'Prop. (DE) Tissues', limits = c(0,1), expand = c(0,0)) +
+    scale_y_continuous(name = 'Proportion (DE) Tissues', limits = c(0,1), expand = c(0,0)) +
     scale_fill_startrek() +
     coord_flip() +
     theme_bw() +
@@ -971,9 +974,9 @@ tp %>% group_by(tag) %>%
 sum(tps %>% filter(tag %in% c("BLP", "LP")) %>% select(n))
 sum(tps %>% filter(tag %in% c("AHP", "HP")) %>% select(n))
 p5b = ggplot(tp) +
-    geom_bar(aes(x = tag, y = n, fill = tsTag), position = position_fill(reverse = T), stat = 'identity', width = 0.8) +
+    geom_bar(aes(x=tag, y=n, fill=tsTag), position=position_fill(reverse=T), width=0.8) +
     scale_x_discrete(breaks = tps$tag, labels = tps$lab, expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = seq(0,1,by=0.25), oob = rescale_none, expand = c(0, 0)) +
+    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = seq(0,1,by=0.25), expand = c(0, 0)) +
     coord_flip() +
     scale_fill_npg() +
     theme_bw() +
@@ -1005,8 +1008,8 @@ for (dtag in names(listd)) {
         mutate(lab = sprintf("%2d (%4d)", n.tis.tot, ng.tot))
     p = ggplot(tp) +
         geom_bar(aes(x = n.tis.tot, y = n, fill = tag), position = position_fill(reverse = T), stat='identity', width=0.8) +
-        scale_x_continuous(name = "Num. DE Tissue", breaks = tps$n.tis.tot, labels = tps$lab, expand = c(0,0)) +
-        scale_y_continuous(name = "Prop. Genes", breaks = c(.25,.5,.75), expand = c(0,0)) +
+        scale_x_continuous(name = "Number DE Tissue", breaks = tps$n.tis.tot, labels = tps$lab, expand = c(0,0)) +
+        scale_y_continuous(name = "Proportion Genes", breaks = c(.25,.5,.75), expand = c(0,0)) +
         coord_flip() +
         scale_fill_simpsons(name = title.p) +
         theme_bw() +
@@ -1031,13 +1034,13 @@ txd %>% filter(HP+LP>=2) %>% summarise(ntot = n())
 tp = txd %>% mutate(n.tis = LP+HP) %>% filter(n.tis >= 1) %>%
     count(n.tis, tag) %>%
     mutate(fac = ifelse(n.tis <= 2, 1, 2))
-xlabel = sprintf("Num. non-MP Tissues")
+xlabel = sprintf("Number non-MP Tissues")
 tp2 = tp %>% filter(n.tis >= 2) %>%
     group_by(tag) %>% summarise(n = sum(n)) %>% mutate(p = n/sum(n)) %>% print(n=5)
 p = ggplot(tp) +
     geom_bar(aes(x = n.tis, y = n, fill = tag), position = 'stack', stat='identity', width=0.7) +
     scale_x_continuous(name = xlabel, breaks = 1:10, expand = c(.01,0)) +
-    scale_y_continuous(name = "Num. Genes", expand = c(.02, 0)) +
+    scale_y_continuous(name = "Number Genes", expand = c(.02, 0)) +
     scale_fill_manual(values = cols.mix3) +
     facet_wrap(~fac, scales='free') +
     theme_bw() +
@@ -1064,8 +1067,8 @@ tps = tp %>% group_by(n.tis.tot) %>%
     mutate(lab = sprintf("%2d (%4d)", n.tis.tot, ng.tot))
 p7 = ggplot(tp) +
     geom_bar(aes(x = n.tis.tot, y = n, fill = tag), position = position_fill(reverse = T), stat='identity', width=0.8) +
-    scale_x_continuous(name = "Num. DE Tissue", breaks = tps$n.tis.tot, labels = tps$lab, expand = c(0,0)) +
-    scale_y_continuous(name = "Prop. Genes", expand = c(0, 0)) +
+    scale_x_continuous(name = "Number DE Tissue", breaks = tps$n.tis.tot, labels = tps$lab, expand = c(0,0)) +
+    scale_y_continuous(name = "Proportion Genes", expand = c(0, 0)) +
     scale_fill_manual(values = cols.mix4) +
     coord_flip() +
     theme_bw() +
@@ -1101,12 +1104,12 @@ write_tsv(te, fo)
 #{{{ plot
 fo = file.path(dirw, "25.Dom.pdf")
 ggarrange(p2a, p2b, p2c, p5a,
-    nrow = 2, ncol = 2, labels = LETTERS[1:4], heights = c(2,2)) %>% 
+    nrow = 2, ncol = 2, labels = LETTERS[1:4], heights = c(2,2)) %>%
     ggexport(filename = fo, width = 8, height = 4)
 #
 fo = file.path(dirw, "25.Dom.sup.pdf")
 ggarrange(p1, p4, p6a, p6b, p7, p7a,
-    nrow = 3, ncol = 2, labels = LETTERS[1:6], heights = c(2.5,2,2)) %>% 
+    nrow = 3, ncol = 2, labels = LETTERS[1:6], heights = c(2.5,2,2)) %>%
     ggexport(filename = fo, width = 8, height = 9)
 #}}}
 
@@ -1114,7 +1117,7 @@ ggarrange(p1, p4, p6a, p6b, p7, p7a,
 de.prop = 0.5
 gids = tsd %>% filter(tag != 'MP', n.tis >= 1) %>% group_by(gid) %>%
     summarise(n.tis.dom = sum(n.tis), n.tis.tot = n.tis.tot[1]) %>%
-    ungroup() %>% 
+    ungroup() %>%
     filter(n.tis.tot >= de.prop * ntissue, n.tis.dom >= 2) %>%
     pull(gid)
 length(gids)
@@ -1221,7 +1224,7 @@ tm %>% group_by(Tissue) %>%
     group_by(1) %>% 
     summarise(ng.min = min(n), ng.max = max(n),
               p.min = min(p), p.max = max(p))
-ntissue = max(tsh_r$n.tis.tot) 
+ntissue = max(tsh_r$n.tis.tot)
 regs = taglst$Reg1
 tnr = t_num %>% filter(ctag %in% c("Reg1")) %>%
     select(-ctag) %>%
@@ -1272,17 +1275,17 @@ pb = ggplot(tp2) +
     guides(color = guide_legend(override.aes = list(size=2.5), ncol = 1, byrow = F)) +
     theme(axis.title = element_text(size = 9)) +
     theme(axis.text = element_text(size = 8))
-p1a = ggMarginal(pa, type = 'histogram', margins = 'both', size = 3, 
-                groupColour = T, groupFill = T, 
+p1a = ggMarginal(pa, type = 'histogram', margins = 'both', size = 3,
+                groupColour = T, groupFill = T,
                 xparams = list(size=0), yparams = list(size=0))
 p1b = ggMarginal(pb, type = 'histogram', margins = 'both', size = 3,
-                groupColour = T, groupFill = T, 
+                groupColour = T, groupFill = T,
                 xparams = list(size=0), yparams = list(size=0))
 #}}}
 
 #{{{ p2: per-tissue stats
 tnr1 = tnr %>% group_by(Tissue) %>% summarise(ng.tot = sum(ngene))
-tnr %>% 
+tnr %>%
     left_join(tnr1, by = 'Tissue') %>%
     mutate(pg = ngene/ng.tot) %>%
     group_by(tag) %>%
@@ -1299,7 +1302,7 @@ tps = tp %>% group_by(Tissue) %>% summarise(ng.tot = sum(ngene)) %>%
 p2 = ggplot(tp) +
     geom_bar(aes(x = Tissue, y = ngene, fill = tag), position = position_fill(reverse = T), stat = 'identity', alpha = 0.8, width = 0.8) +
     scale_x_discrete(breaks = tps$Tissue, labels = tps$lab, expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = c(.25,.5,.75), expand = c(0,0)) +
+    scale_y_continuous(name = sprintf("Proportion Genes"), breaks = c(.25,.5,.75), expand = c(0,0)) +
     scale_fill_manual(values = cols.reg1) +
     coord_flip() +
     theme_bw() +
@@ -1315,8 +1318,8 @@ p2 = ggplot(tp) +
 
 #{{{ p3 a-e: cis/trans composition
 #{{{
-tx1 = tm %>% 
-    filter(!is.na(pDE) & pDE != 'non_DE', abs(log2mb) > 1, 
+tx1 = tm %>%
+    filter(!is.na(pDE) & pDE != 'non_DE', abs(log2mb) > 1,
            !is.na(SPE), !is.na(Dom), !is.na(Reg1)) %>%
     filter(Tissue %in% tissues20) %>%
     mutate(Tissue = factor(Tissue, levels = tissues20)) %>%
@@ -1397,12 +1400,12 @@ tp = tr %>%
     count(ctag, tag, rtag)
 tps = tp %>% group_by(ctag, tag) %>% summarise(n.tot = sum(n)) %>%
     mutate(lab = sprintf("%s (%d)", tag, n.tot)) %>% arrange(tag)
-tp = tp %>% left_join(tps, by = c('ctag','tag')) %>% mutate(prop = n/n.tot) 
+tp = tp %>% left_join(tps, by = c('ctag','tag')) %>% mutate(prop = n/n.tot)
 tp %>% select(-n, -n.tot, -lab) %>% spread(rtag, prop)
 p3a = ggplot(tp) +
     geom_bar(aes(x = tag, y = prop, fill = rtag), position = position_stack(reverse = T), stat = 'identity', alpha = .8, width = .8) +
     scale_x_discrete(breaks = tps$tag, labels = tps$lab, expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = c(.25,.5,.75), oob = rescale_none, expand = c(0,0)) +
+    scale_y_continuous(name = sprintf("Proportion Genes"), breaks = c(.25,.5,.75), expand = c(0,0)) +
     scale_fill_manual(values = cols.reg1) +
     coord_flip() +
     facet_grid(ctag~., scale='free', space = 'free') +
@@ -1535,10 +1538,10 @@ p3x = pg
 #{{{ p3d - obsolete: cis-trans density plot
 for (i in 1:length(lstd)) {
     tp = lstd[[i]]
-    tp = tp %>% 
+    tp = tp %>%
         mutate(tag = factor(tag, levels = rev(levels(tp$tag)))) %>%
         mutate(bic.diff = ifelse(bic.diff < bic_min, bic_min, bic.diff)) %>%
-        mutate(bic.diff = ifelse(bic.diff > bic_max, bic_max, bic.diff)) 
+        mutate(bic.diff = ifelse(bic.diff > bic_max, bic_max, bic.diff))
     p = ggplot(tp) +
         geom_density_ridges_gradient(aes(x = bic.diff, y = tag, fill = ..x..)) +
         scale_x_continuous(name = expression(cis %<->% trans), limits = c(bic_min,bic_max), expand = c(0,0)) +
@@ -1570,7 +1573,7 @@ tps = tp %>% count(tag) %>%
 p4a = ggplot(tp) +
     geom_boxplot(aes(x = tag, y = prop.tis, fill = tag), notch = T, outlier.size = 0.5, width = .8, alpha = .8) +
     scale_x_discrete(breaks = tps$tag, labels = tps$lab, expand = c(0,.5)) +
-    scale_y_continuous(name = 'Prop. (DE) Tissues', limits = c(0,1), expand = c(0,0)) +
+    scale_y_continuous(name = 'Proportion (DE) Tissues', limits = c(0,1), expand = c(0,0)) +
     scale_fill_manual(values = rev(cols.reg1)) +
     coord_flip() +
     theme_bw() +
@@ -1592,7 +1595,7 @@ tps = tp %>% group_by(tag) %>% summarise(n = sum(n)) %>%
 p4b = ggplot(tp) +
     geom_bar(aes(x = tag, y = n, fill = tsTag), position = position_fill(reverse = T), stat = 'identity', width = 0.8) +
     scale_x_discrete(breaks = tps$tag, labels = tps$lab, expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = seq(.25,.75,by=.25), expand = c(0,0)) +
+    scale_y_continuous(name = sprintf("Proportion Genes"), breaks = seq(.25,.75,by=.25), expand = c(0,0)) +
     coord_flip() +
     scale_fill_manual(values = cols.ts) +
     theme_bw() +
@@ -1604,7 +1607,7 @@ p4b = ggplot(tp) +
     theme(axis.title.x = element_text(size = 9)) +
     theme(axis.title.y = element_blank()) +
     theme(axis.text.x = element_text(size = 8)) +
-    theme(axis.text.y = element_text(size = 8)) 
+    theme(axis.text.y = element_text(size = 8))
 #}}}
 
 #{{{ p5: non-syn/GO enrichment
@@ -1627,7 +1630,7 @@ trb = tr %>% filter(tag == 'Constitutive')
 tr = rbind(tra, trb) %>% 
     mutate(ctag = factor(ctag, levels = ctags1)) %>%
     arrange(ctag, tag) %>%
-    mutate(tag = sprintf("%s|%12s", ctag, tag)) 
+    mutate(tag = sprintf("%s|%12s", ctag, tag))
 tags = c(unique(tc$tag), unique(tr$tag))
 td = rbind(tc, tr)
 ctags = unique(td$ctag)
@@ -1640,10 +1643,10 @@ tjs = list(tsyn, tdom, thom)
 legend.titles = c("Non-syntenic", "w.o. Known Domain", "w.o. Homologs")
 for (i in 1:3) {
     tj = tjs[[i]]
-    legend.title = sprintf("Prop. Genes %s", legend.titles[i])
+    legend.title = sprintf("Genes %s (%%)", legend.titles[i])
     tp = td %>%
         left_join(tj, by = 'gid') %>% group_by(ctag, tag) %>%
-        summarise(ngene = n(), 
+        summarise(ngene = n(),
                   n.na = sum(is.na(atag)),
                   p.na = n.na/ngene * 100) %>% ungroup() %>%
         mutate(p.lab = sprintf("%.0f%%", p.na))
@@ -1660,11 +1663,11 @@ for (i in 1:3) {
         theme(legend.position = 'none') +
         theme(panel.grid = element_blank()) +
         theme(axis.ticks.y = element_blank()) +
-        theme(axis.title.x = element_text(size = 8, hjust = 0)) +
+        theme(axis.title.x = element_text(size = 8, hjust=.5)) +
         theme(axis.title.y = element_blank()) +
         theme(axis.text.x = element_text(size = 8)) +
-        theme(axis.text.y = element_text(size = 8, family = 'mono', hjust = 1))
-    if(i != 1) p = p + theme(axis.text.y = element_blank()) 
+        theme(axis.text.y = element_text(size=8, family='mono',face='bold'))
+    if(i != 1) p = p + theme(axis.text.y = element_blank())
     if(i == 1) pa = p
     if(i == 2) pb = p + theme(plot.margin = unit(c(.5,0,.5,0), 'lines'))
     if(i == 3) pc = p
@@ -1678,7 +1681,7 @@ ggarrange(
     ggarrange(p1a, p1b, nrow = 1, ncol = 2, labels = c('A','B')),
     ggarrange(p3b, p3c, nrow = 1, ncol = 2, widths = c(1,5), labels = 'C'),
     ggarrange(p4a, p4b, nrow = 1, ncol = 2, labels=c('D','E')),
-    nrow = 3, ncol = 1, heights = c(4,3.5,2)) %>% 
+    nrow = 3, ncol = 1, heights = c(4,3.5,2)) %>%
     ggexport(filename = fo, width = 8.5, height = 9)
 #
 fo = file.path(dirw, "25.Reg.sup.pdf")
@@ -1686,12 +1689,12 @@ ggarrange(
     ggarrange(p2, p3a, nrow = 1, ncol = 2, labels = c('A','B'), common.legend=T),
     ggarrange(p5, nrow = 1, ncol = 1, labels = 'C'),
     ggarrange(p_con1, NULL, nrow = 1, ncol = 2, labels = "D"),
-    nrow = 3, ncol = 1, heights = c(3,2.5,1.5)) %>% 
+    nrow = 3, ncol = 1, heights = c(3,2.5,1.5)) %>%
     ggexport(filename = fo, width = 8, height = 8)
 #
 fo = file.path(dirw, '85.eQTL.pdf')
 ggarrange(p3b, p3x,
-    nrow = 1, ncol = 2, widths = c(1,6))  %>% 
+    nrow = 1, ncol = 2, widths = c(1,6))  %>%
     ggexport(filename = fo, width = 9, height = 3)
 #}}}
 #}}}
@@ -1743,7 +1746,7 @@ tps = tnb %>% group_by(Tissue) %>% summarise(ng.tot = sum(ngene)) %>%
 p1 = ggplot(tnb) +
     geom_bar(aes(x = Tissue, y = ngene, fill = tag), position = position_fill(reverse = T), stat = 'identity', width = 0.8, alpha = .8) +
     scale_x_discrete(breaks = tps$Tissue, labels = tps$lab, expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = c(.25,.5,.75), expand = c(0,0)) +
+    scale_y_continuous(name = sprintf("Proportion Genes"), breaks = c(.25,.5,.75), expand = c(0,0)) +
     scale_fill_manual(values = cols.reg2) +
     coord_flip() +
     theme_bw() +
@@ -1775,7 +1778,7 @@ tps = tp %>% group_by(htag) %>% summarise(ntot = sum(n)) %>% ungroup() %>%
 pb = ggplot(tp) +
     geom_bar(aes(x = htag, y = n, fill = btag), position = position_fill(reverse = T), stat = 'identity', width = 0.7, alpha = .8) +
     scale_x_discrete(breaks = tps$htag, labels = tps$lab, expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = c(.25,.5,.75), oob = rescale_none, expand = c(0,0)) +
+    scale_y_continuous(name = sprintf("Proportion Genes"), breaks = c(.25,.5,.75), expand=c(0,0)) +
     coord_flip() +
     scale_fill_manual(values = cols.reg2) +
     theme_bw() +
@@ -1793,16 +1796,16 @@ p2 = pb
 #{{{ p3: mix pattern
 txb %>% filter(b+m>=2) %>% count(tag) %>% mutate(p = n/sum(n))
 txb %>% filter(b+m>=2) %>% summarise(ntot = n())
-nde.prop = 0 
-tp = txb %>% filter(n.tis.tot >= nde.prop * ntissue) %>% 
+nde.prop = 0
+tp = txb %>% filter(n.tis.tot >= nde.prop * ntissue) %>%
     count(n.tis.tot, tag)
 ymax = tp %>% group_by(n.tis.tot) %>% summarise(n = sum(n)) %>%
     ungroup() %>% group_by(1) %>%
     summarise(nmax = max(n)) %>% pull(nmax) + 50
 p3 = ggplot(tp) +
     geom_bar(aes(x = n.tis.tot, y = n, fill = tag), position = position_stack(reverse = F), stat='identity', width = .8) +
-    scale_x_continuous(name = 'Num. non-DE tissues', expand = c(0,0)) +
-    scale_y_continuous(name = "Num. Genes", expand = c(0,0)) +
+    scale_x_continuous(name = 'Number non-DE tissues', expand = c(0,0)) +
+    scale_y_continuous(name = "Number Genes", expand = c(0,0)) +
     scale_fill_manual(values = cols.mix4) +
     theme_bw() +
     theme(legend.position = c(1,1), legend.direction = 'vertical', legend.justification=c(1,1), legend.background = element_blank()) +
@@ -1816,7 +1819,7 @@ p3 = ggplot(tp) +
 #}}}
 
 #{{{ p7: consis. Reg2 composition of cis/trans
-gids.r = tsh_r %>% filter(ctag == 'Reg1', n.tis.tot >= 3) %>% 
+gids.r = tsh_r %>% filter(ctag == 'Reg1', n.tis.tot >= 3) %>%
     distinct(gid) %>% pull(gid)
 gids.b = txb %>% filter(b+m >= 3) %>%
     distinct(gid) %>% pull(gid)
@@ -1841,7 +1844,7 @@ sum(tp$n)
 p7 = ggplot(tp) +
     geom_bar(aes(x = tag, y = prop, fill = rtag), position = position_fill(reverse = T), stat = 'identity', width = .8) +
     scale_x_discrete(breaks = tps$tag, labels = tps$lab, expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = c(.25,.5,.75), expand = c(0,0)) +
+    scale_y_continuous(name = sprintf("Proportion Genes"), breaks = c(.25,.5,.75), expand = c(0,0)) +
     scale_fill_manual(values = cols.reg1) +
     coord_flip() +
     theme_bw() +
@@ -1852,11 +1855,11 @@ p7 = ggplot(tp) +
     theme(plot.margin = unit(c(2.5,.5,.5,.5), "lines")) +
     theme(axis.title.x = element_text(size = 9)) +
     theme(axis.title.y = element_blank()) +
-    theme(axis.text = element_text(size = 8)) 
+    theme(axis.text = element_text(size = 8))
 #}}}
 
 #{{{ p8: consis. Reg2 <> consis. Reg1 (density)
-gids = tsh_r %>% filter(ctag == 'Reg1', n.tis.tot >= 5) %>% 
+gids = tsh_r %>% filter(ctag == 'Reg1', n.tis.tot >= 5) %>%
     distinct(gid) %>% pull(gid)
 tm2 = tm %>% filter(gid %in% gids, !is.na(Reg1), Tissue %in% tissues20) %>%
     filter(!is.na(bic.c)) %>%
@@ -1878,21 +1881,21 @@ p8 = ggplot(tp) +
     theme(plot.margin = unit(c(.5,.5,.5,.5), "lines")) +
     theme(axis.title.x = element_text(size = 9)) +
     theme(axis.title.y = element_blank()) +
-    theme(axis.text = element_text(size = 8)) 
+    theme(axis.text = element_text(size = 8))
 #}}}
 
 #{{{ p4: #B/M-biased genes broken by #non-DE tissues
 tp = tsb %>% filter(tag != 'conserved', n.tis >= 1) %>% group_by(gid, n.tis.tot) %>%
     summarise(n.tis = sum(n.tis)) %>%
-    ungroup() %>% 
+    ungroup() %>%
     count(n.tis, n.tis.tot)
 tps = tp %>% group_by(n.tis) %>% summarise(ng.tot = sum(n)) %>%
     mutate(lab = sprintf("%2d (%4d)", n.tis, ng.tot))
 p4 = ggplot(tp) +
     geom_bar(aes(x = n.tis, y = n, fill = n.tis.tot), position = 'stack', stat='identity', width=0.7) +
-    scale_x_continuous(name = 'Num. B73/M17-biased Tissues', c(5,10,15), expand = c(0,0)) +
-    scale_y_continuous(name = "Num. Genes", expand = c(0, 0)) +
-    scale_fill_viridis(name = 'Num. non-DE Tissues', breaks = c(1,2,5,10,15,20), direction = -1) +
+    scale_x_continuous(name = 'Number B73/M17-biased Tissues', c(5,10,15), expand = c(0,0)) +
+    scale_y_continuous(name = "Number Genes", expand = c(0, 0)) +
+    scale_fill_viridis(name = 'Number non-DE Tissues', breaks = c(1,2,5,10,15,20), direction = -1) +
 #    facet_wrap(~fac, scales='free') +
     theme_bw() +
     theme(legend.position = c(1,1), legend.justification=c(1,1), legend.background = element_blank()) +
@@ -1903,7 +1906,7 @@ p4 = ggplot(tp) +
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_blank()) +
     theme(plot.margin = unit(c(.5,.5,.5,.5), "lines")) +
     theme(axis.title = element_text(size = 9)) +
-    theme(axis.text = element_text(size = 8)) 
+    theme(axis.text = element_text(size = 8))
 #}}}
 
 #{{{ p5 a-b:tissue specificity
@@ -1914,7 +1917,7 @@ tps = tp %>% count(tag) %>%
 p5a = ggplot(tp) +
     geom_boxplot(aes(x = tag, y = prop.tis, fill = tag), notch = T, outlier.size = 0.5, width = .8) +
     scale_x_discrete(breaks = tps$tag, labels = tps$lab, expand = c(0,.5)) +
-    scale_y_continuous(name = 'Prop. (non-DE) Tissues', limits = c(0,1), breaks = c(.25,.5,.75), expand = c(0,0)) +
+    scale_y_continuous(name = 'Proportion (non-DE) Tissues', limits = c(0,1), breaks = c(.25,.5,.75), expand = c(0,0)) +
     scale_fill_manual(values = cols.reg2) +
     coord_flip() +
     theme_bw() +
@@ -1923,16 +1926,16 @@ p5a = ggplot(tp) +
     theme(axis.title.x = element_text(size = 9)) +
     theme(axis.title.y = element_blank()) +
     theme(axis.text.x = element_text(size = 8)) +
-    theme(axis.text.y = element_text(size = 8)) 
+    theme(axis.text.y = element_text(size = 8))
 tp = tsh_r %>% filter(ctag %in% c("Reg2"))  %>%
-    count(tag, tsTag) %>% 
+    count(tag, tsTag) %>%
     mutate(tag = factor(tag, levels = rev(regs2)))
-tps = tp %>% group_by(tag) %>% summarise(n = sum(n)) %>% 
+tps = tp %>% group_by(tag) %>% summarise(n = sum(n)) %>%
     mutate(lab = sprintf("%s (%d)", tag, n))
 p5b = ggplot(tp) +
     geom_bar(aes(x = tag, y = n, fill = tsTag), position = position_fill(reverse = T), stat = 'identity', width = .8) +
     scale_x_discrete(breaks = tps$tag, labels = tps$lab, expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = seq(.25,.75,by=0.25), oob = rescale_none, expand = c(0, 0)) +
+    scale_y_continuous(name = sprintf("Proportion Genes"), breaks = seq(.25,.75,by=0.25), expand = c(0,0)) +
     coord_flip() +
     scale_fill_manual(values = cols.ts) +
     theme_bw() +
@@ -1944,15 +1947,15 @@ p5b = ggplot(tp) +
     theme(plot.margin = unit(c(2.5,.5,.5,.5), "lines")) +
     theme(axis.title.x = element_text(size = 9)) +
     theme(axis.title.y = element_blank()) +
-    theme(axis.text = element_text(size = 8)) 
+    theme(axis.text = element_text(size = 8))
 #}}}
 
 #{{{ plot
 fo = file.path(dirw, "25.Reg2.pdf")
 #ggarrange(p1, p2, p3, p4, p5a, p5b, p7, p8,
-#    nrow = 4, ncol = 2, labels=LETTERS[1:8], heights = c(4,4,2,2)) %>% 
-ggarrange(p1, p2, 
-    nrow = 2, ncol = 1, labels=LETTERS[1:2], heights = c(4,1.5)) %>% 
+#    nrow = 4, ncol = 2, labels=LETTERS[1:8], heights = c(4,4,2,2)) %>%
+ggarrange(p1, p2,
+    nrow = 2, ncol = 1, labels=LETTERS[1:2], heights = c(4,1.5)) %>%
     ggexport(filename = fo, width = 6, height = 7)
 #}}}
 #}}}
@@ -1960,7 +1963,7 @@ ggarrange(p1, p2,
 #{{{ mix-pDE <> mix-Reg1; mix-pDE <> mix-Reg2
 #{{{
 # pDE
-ntissue.pde = max(tsh_d$n.tis.tot) 
+ntissue.pde = max(tsh_d$n.tis.tot)
 tags.mix.pde = c("consis. non-DE", "consis. DE_B", "consis. DE_M", "mix of DE_B/DE_M")
 tx.pde = tsh_d %>% filter(ctag %in% c("pDE")) %>%
     transmute(gid = gid, tag = tag, n.tis.expr = n.tis.tot, n.tis.pde = n.tis) %>%
@@ -1968,7 +1971,7 @@ tx.pde = tsh_d %>% filter(ctag %in% c("pDE")) %>%
                  ifelse(tag == 'DE mix', 'mix of DE_B/DE_M', tag))) %>%
     mutate(tag = factor(tag, levels = tags.mix.pde))
 # Dom
-ntissue.dom = max(tsh_r$n.tis.tot) 
+ntissue.dom = max(tsh_r$n.tis.tot)
 tags.mix.dom = c("consis. MP", "consis. LP/BLP", "consis. HP/AHP", "mix of HP/LP")
 tx.dom = tsh_r %>% filter(ctag %in% c("Dom")) %>%
     select(-ctag, -prop.tis) %>%
@@ -1987,7 +1990,7 @@ tx.dom = tsh_r %>% filter(ctag %in% c("Dom")) %>%
 # Reg2
 tags.reg2 = c('conserved',"B73 biased","Mo17 biased")
 tags.mix.reg2 = c("consis. conserved", "consis. B73-biased", "consis. Mo17-biased", "mix of B73-biased/Mo17-biased")
-ntissue.reg2 = max(tsh_r$n.tis.tot) 
+ntissue.reg2 = max(tsh_r$n.tis.tot)
 tx.reg2 = tsh_r %>% filter(ctag == 'Reg2') %>%
     select(-ctag, -prop.tis) %>%
     mutate(tag = as.character(tag)) %>%
@@ -1998,7 +2001,7 @@ tx.reg2 = tsh_r %>% filter(ctag == 'Reg2') %>%
     spread(tag, n.tis) %>%
     replace_na(list(b=0,m=0,conserved=0)) %>% 
     mutate(tag = ifelse(b > 0 & m > 0, 'mix of B73-biased/Mo17-biased',
-                 ifelse(b > 0, 'consis. B73-biased', 
+                 ifelse(b > 0, 'consis. B73-biased',
                  ifelse(m > 0, 'consis. Mo17-biased', 'consis. conserved')))) %>%
     mutate(tag = factor(tag, levels = tags.mix.reg2)) %>%
     transmute(gid = gid, tag = tag, n.tis.nde = n.tis.tot)
@@ -2007,7 +2010,7 @@ tx.reg2 = tsh_r %>% filter(ctag == 'Reg2') %>%
 #{{{ p1: cis/trans composition of consis. DE
 gids.p = tx.pde %>% filter(n.tis.pde >= .25 * ntissue.pde) %>%
     distinct(gid) %>% pull(gid)
-gids.r = tsh_r %>% filter(ctag == 'Reg1', n.tis.tot >= 3) %>% 
+gids.r = tsh_r %>% filter(ctag == 'Reg1', n.tis.tot >= 3) %>%
     distinct(gid) %>% pull(gid)
 gids = gids.r[gids.r %in% gids.p]
 tr1 = tm %>% filter(gid %in% gids, !is.na(Reg1), Tissue %in% tissues20) %>%
@@ -2026,11 +2029,11 @@ tp = tp %>%
     summarise(n = sum(nc)) %>%
     mutate(prop = n/sum(n)) %>%
     print(n=20)
-sum(tp$n) 
+sum(tp$n)
 p1 = ggplot(tp) +
     geom_bar(aes(x = tag, y = prop, fill = rtag), position = position_fill(reverse = T), stat = 'identity', width = .8, alpha = .8) +
     scale_x_discrete(breaks = tps$tag, labels = tps$lab, expand = c(0,0)) +
-    scale_y_continuous(name = sprintf("Prop. Genes"), breaks = c(.25,.5,.75), expand = c(0,0)) +
+    scale_y_continuous(name = sprintf("Proportion Genes"), breaks = c(.25,.5,.75), expand = c(0,0)) +
     scale_fill_manual(values = cols.reg1) +
     coord_flip() +
     theme_bw() +

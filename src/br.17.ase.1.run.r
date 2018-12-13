@@ -2,41 +2,40 @@ require(DESeq2)
 require(VGAM)
 require(gamlss)
 require(BiocParallel)
-source("br.fun.r")
+source("functions.R")
 bpparam <- MulticoreParam()
 #bplog(bpparam) <- TRUE
 
-diri = file.path(dirp, "41_qc")
+diri = file.path(dird, "41_qc")
 fm = file.path(diri, '10.rda')
 y = load(fm)
 
 dirw = file.path(dird, '44_ase')
-diri = '~/projects/maize.expression/data/08_raw_output'
+diri = '~/projects/rnaseq/data/08_raw_output'
 fi = file.path(diri, 'me99b', 'ase.tsv')
 ti = read_tsv(fi)
 
 if(1==2) {
 #{{{ ASE stats / QC
 ti1 = ti %>% inner_join(th[,1:3], by = 'SampleID') %>%
-    mutate(ntc = n0 + n1 + ncft, nt = n0 + n1,
-           pcft = ncft / ntc, pref = n0 / nt) %>%
-    filter(nt >= 10, pcft <= .05)
+    mutate(ntc = n0+n1+ncft, nt=n0+n1, pcft=ncft/ntc, pref=n0/nt) %>%
+    dplyr::filter(nt >= 10, pcft <= .05)
 
 tps = th %>% mutate(Tissue = factor(Tissue, levels = tissues23)) %>%
     arrange(Tissue, Genotype, Replicate) %>%
-    mutate(i = 1:length(SampleID)) 
+    mutate(i = 1:length(SampleID))
 tpx = tps %>% group_by(Tissue) %>%
     summarise(xmed = mean(i), xmin = min(i), xmax = max(i)) %>% ungroup()
 tps = tps %>% mutate(i = factor(i, levels = 1:length(SampleID)))
 tp = ti1 %>% inner_join(tps[,c('SampleID','i')], by = 'SampleID')
-tps = tp %>% count(SampleID, i, Tissue, Genotype)
+tps = tp %>% dplyr::count(SampleID, i, Tissue, Genotype)
 p = ggplot(tp) +
     geom_boxplot(aes(x = i, y = pref, color = Genotype), outlier.shape = NA, width = .7) +
-    scale_x_discrete(name = 'num. genes', breaks = tps$i, labels = tps$n) +
+    scale_x_discrete(name = 'Number Genes', breaks = tps$i, labels = tps$n) +
     scale_y_continuous(name = 'Proportion reads w. B73 allele') +
-    facet_wrap(.~Tissue, scale = 'free', ncol = 3) + 
+    facet_wrap(.~Tissue, scale = 'free', ncol = 3) +
     scale_color_aaas() +
-    otheme(xtitle = T, xtext = T, ytitle = T, ytext = T, 
+    otheme(xtitle = T, xtext = T, ytitle = T, ytext = T,
            ygrid = T, xticks = T, yticks = T,
            legend.pos = 'bottom.right') +
     theme(axis.text.x = element_text(angle = 30, hjust = 1, size = 8))
@@ -52,8 +51,8 @@ tis = ti1 %>%
               pref.q25 = quantile(pref, .25, na.rm = T),
               pref.q50 = quantile(pref, .5, na.rm = T),
               pref.q75 = quantile(pref, .75, na.rm = T))
-tis %>% 
-    filter(Genotype == 'BxM') %>% 
+tis %>%
+    filter(Genotype == 'BxM') %>%
     select(SampleID, Tissue, n.gene, pcft.q25, pcft.q50, pcft.q75) %>%
     print(n=69)
 fo = file.path(dirw, '05.ase.stat.rda')
