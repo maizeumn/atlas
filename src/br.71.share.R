@@ -1,11 +1,9 @@
 #{{{ head
-source("br.fun.r")
-dirw = file.path(dirp, "49.coop")
-fi = file.path(dirw, "01.master.RData")
+source("functions.R")
+dirw = file.path(dird, "49_coop")
+fi = file.path(dirw, "01.master.rda")
 x = load(fi)
-fd = file.path(dirw, "03.sharing.RData")
-x = load(fd)
-tis.prop = 0.5
+tis.prop = .5
 #}}}
 
 #{{{ tissue-specific DE/SPE
@@ -43,22 +41,24 @@ write_tsv(to, fo)
 #}}}
 
 #{{{
-fi = file.path(dirp, "41.qc/10.rep.merged.RData")
+fi = file.path(dird, "41_qc/10.rda")
 x = load(fi)
 
-to1 = t_rep_merged %>% filter(Genotype == 'B73') %>%
+gt = 'B73'
+gt = 'Mo17'
+to1 = tmm %>% filter(Genotype == gt) %>%
     select(Tissue, gid, CPM) %>%
     spread(Tissue, CPM)
 dim(to1)
-to2 = t_rep_merged %>% filter(Genotype == 'B73') %>%
+to2 = tmm %>% filter(Genotype == gt) %>%
     select(Tissue, gid, FPKM) %>%
     spread(Tissue, FPKM)
 dim(to2)
 
-diro = file.path(dirp, "71_output")
-fo1 = file.path(diro, 'CPM_B73.tsv')
+diro = file.path(dird, "71_output")
+fo1 = sprintf("%s/CPM_%s.tsv", diro, gt)
 write_tsv(to1, fo1)
-fo2 = file.path(diro, 'FPKM_B73.tsv')
+fo2 = sprintf("%s/FPKM_%s.tsv", diro, gt)
 write_tsv(to2, fo2)
 #}}}
 

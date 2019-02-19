@@ -1,0 +1,151 @@
+---
+title: "Supplemental Information"
+output:
+  pdf_document:
+    citation_package: natbib
+    keep_tex: false
+    fig_caption: true
+    latex_engine: pdflatex
+    template: rmd-latex-ms.tex
+# author:
+# - name: Peng Zhou
+#  affiliation: University of Minnesota
+# - name: Nathan Springer
+#  affiliation: University of Minnesota
+# abstract: "This document provides an introduction to R Markdown, argues for its..."
+# keywords: "pandoc, r markdown, knitr"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+geometry: margin=1in
+fontfamily: mathpazo
+fontsize: 11pt
+# spacing: double
+# bibliography: ~/Dropbox/master.bib
+# biblio-style: apsr
+header-includes:
+- \usepackage{caption}
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage[table]{xcolor}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{fancyhdr}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \captionsetup[figure]{labelformat=empty}
+- \captionsetup[table]{labelformat=empty}
+---
+\fancypagestyle{plain}{%
+  \renewcommand{\headrulewidth}{0pt}%
+  \fancyhf{}%
+  \fancyfoot[R]{\footnotesize \thepage\,}
+  \setlength\footskip{0pt}
+}
+\pagenumbering{gobble}
+
+\listoftables
+\listoffigures
+
+\pagebreak
+\pagenumbering{arabic}
+\pagestyle{plain}
+```{r echo = FALSE}
+require(tidyverse)
+require(knitr)
+require(kableExtra)
+options(knitr.kable.NA = '')
+dirw = '~/projects/briggs/data/41_qc' 
+ft = file.path(dirw, "00.table.rda")
+load(ft)
+tt = tt %>% select(-AssignedRate) %>% 
+  rename(Sample=SampleID, Rep=Replicate, TotalPairs=TotalReadPair, 
+  TrimmedPairs = TrimmedReadPair)
+kable(tt, format = 'latex', longtable = T, booktabs = T,
+  format.args = list(big.mark = ","),
+  caption = "Table S1.  Samples used in this study.") %>%
+  kable_styling(latex_options = c("repeat_header", "hold_position"), font_size=7.5)
+```
+
+\pagebreak
+```{r echo = FALSE}
+options(knitr.kable.NA = 0)
+dirw = '~/projects/briggs/data/49_coop' 
+fx = file.path(dirw, "51.go.enrich.rda")
+load(fx)
+kable(tx, format = 'latex', booktabs = T,
+  caption = "Table S2.  Enriched Gene Ontology (GO) terms for identified gene sets.") %>%
+  kable_styling(latex_options = c("repeat_header", "scale_down", "striped", "hold_position"), full_width = F, font_size = 8) %>%
+  column_spec(1, bold=T) %>%
+  collapse_rows(columns = 1:2, latex_hline = "major", valign = "top", row_group_label_position = 'stack')
+```
+
+\pagebreak
+![Figure S1. Summary of read mapping statistics. ]($briggs/data/41_qc/01.readmapping.pdf){width=90%}
+
+\small
+For each tissue / genotype combination we show the number of read pairs (in millions) mapped to the maize B73 AGPv4 reference, and the proportion of reads that failed QC (failedQC), failed to map to the genome (Unmap), mapped in multiple locations (Map_LowQual), mapped in high quality to intergenic regions (Unassigned) as well as high quality reads assigned to genes (Assigned).
+
+\pagebreak
+![Figure S2. Consistency between biology replicates of each sample.]($briggs/data/41_qc/07.cpm.cor.pdf){width=100%}
+
+Each panel shows a heatmap of the correlations between biological replicates for each tissue-genotype combination.  These show both the Pearson (upper right half) and Spearman (lower left half) correlation values of gene expression levels (FPKMs) between each pair of replicates.  The subset of 14,216 genes with CPM >1 in at least 90% samples were used in this analysis.
+
+\pagebreak
+![Figure S3. Distance matrix heatmap between all samples. ]($briggs/data/41_qc/08.heatmap.pdf){width=100%}
+
+Pearson correlation coefficients based on gene expression levels (FPKMs) between each pair of samples were shown as a heatmap.  The subset of 14,216 genes with CPM >1 in at least 90% samples were used in this analysis.
+
+\pagebreak
+![Figure S4. The distribution of gene CPM (Counts per Million) values is shown for B73, Mo17 and hybrid in each tissue.]($briggs/data/41_qc/12.cpm.den.pdf){width=90%}
+
+The expression values are normalized using the TMM normalization approach implemented in the edgeR (see methods). Genes with no reads (CPM=0) are not shown.  The first bar in each plot shows genes with CPM that is >0 and <0.2.   
+
+\pagebreak
+![Figure S5. Expression heatmap for 3,304 DE genes between B73 and Mo17 in seedling leaf tissue.]($briggs/data/49_coop/24.DE.heatmap1.pdf){width=100%}
+
+A heatmap is used to visualize expression abundance changes between B73 and Mo17 (i.e., log2(Mo17/B73)) of 3,304 genes that are DE (tissue-wise p-value <0.01 and >=2 fold change) in seedling leaf tissue and expressed in at least 20 tissues.  Blue color indicates higher expression in Mo17 while red indicates higher B73 expression and white indicates no change in expression in B73 relative to Mo17.  Gray color indicates missing values where the gene is silent in both B73 and Mo17 in the corresponding tissue.  The genes were first separated into groups based on whether they exhibit tissue-specific, intermediate frequency or constitutive differential expression (as in Figure 2D) and were then separately clustered.  Within each of these three groups there are genes that exhibit consistently higher expression of B73 (DE_B) or Mo17 (DE_M) as well as some genes that show a mixture of DE_B and DE_M.
+
+\pagebreak
+![Figure S6. Differential expression analysis based on alignments to the Mo17 reference genome.]($briggs/data/49_coop_m/25.DE.pdf){width=100%}
+
+(A\) The number of DEGs for each tissue is indicated by the square symbols with the genotype exhibit higher expression indicated by color (blue - B73 and orange - Mo17). The number of genes with single parent expression (SPE - DEGs with expression <0.1 CPM (Counts per Million) in one parent) for each tissue is shown by the circle. (B) The number of DEGs that are detected in 1-23 tissues is shown. The color indicates which genotypes is more highly expressed as in (A) with pink indicat- ing genes for which some tissues exhibit higher expression for B73 and other tissues with higher expressed for Mo17. (C) The numbers of SPE genes that are detected in 1-23 tissues.
+
+\pagebreak
+![Figure S7. Analysis of non-additive expression for genes that are non-DE in B73 and Mo17.]($briggs/data/49_coop/25.hDE.pdf){width=100%}
+
+(A\) The number of genes that are non-DE between the parents but show above parent (AP, blue) or below parent (BP, orange) expression levels in the hybrid is show for each tissue.  The number in brackets indicates total number of non-additively expressed non-DE genes in each tissue.  Some tissues showed extremely low levels of parent-hybrid DE (ear, seedling meristem, root, auricle, coleoptile tip, internode) while other tissues have many more non-additive expression examples between hybrid and parents (sheath, tassel, spikelets, floret, silk).  (B) The number of tissues with non-additive expression for these non-DE genes is shown.  The color indicates which genotype (parents or hybrid) is more highly expressed (blue - hybrid is higher, orange - parents higher and pink - hybrid is higher than parents in some tissues but lower in others. For the 1,944 genes that exhibit non-additive expression in 2 or more tissues there were 25.6% (498) with consistently above-parent expression in the hybrids and 20.3% (394) with consistent below-parent expression in the hybrids. The remaining 54.1% (1,052) exhibit a mixture of effects with some tissues showing higher hybrid expression and other tissues showing lower hybrid expression.  (C) The genes that are expressed in at least 10 tissues and exhibit parent-hybrid DE in at least one tissue were classified as tissue-specific (DE in less than 20% expressed tissues), intermediate frequency (DE in 20-80% expressed tissues) or constitutive (DE in more than 80% of expressed tissues).  There are very few examples of non-additive patterns for these non-DE genes that occur in >20% of expressed tissues and there are no examples with non-additivity in >80% of the tissues.  (D) The relative expression changes between parents and hybrid for these non-additive genes was assessed. The majority of these genes were just passing the 2-fold change cut-off used for DE and only 181 (3.3%) of these genes exhibit at least 5-fold change in expression in the hybrid relative to the parents.
+
+\pagebreak
+![Figure S8. Analysis of additivity patterns for genes that are DE between parents across tissues.]($briggs/data/49_coop/25.Dom.sup.pdf){width=100%}
+
+(A\) The number of genes assigned to each additive or non-additive inheritance pattern in each tissue.  MP: mid-parent like; LP: low-parent like; BLP: below low-parent; HP: high-parent like; AHP: above high-parent; PD_H: partial dominance higher than mid-parent; PD_L: partial dominance lower than mid-parent.  (B) Genes were classified according to the number of tissues with non-MP expression patterns (x-axis).  Within each category a heatmap is used to visualize the number of tissues with differential expression between parents in 1-20 tissues.  (C-D) Bar plot shows among all genes that are DE in 1-20 tissues (y-axis) the proportion with LP/BLP (panel C) or HP/AHP (panel D) pattern shared across different number of tissues (1-10).  (E) Bar plot shows among all genes that are DE in 1-20 tissues (y-axis), the proportion that are classified as “consistent MP”, “consistent LP/BLP”, “consistent HP/AHP” or “mix of HP/LP” based on whether the observed non-additive pattern switches direction among tissues.  For panels C through E numbers in brackets are the total number of genes in each bar category (i.e., number of genes DE in 1-20 tissues).  (F) Analogous to panel E but rather than proportion, the number of genes showing non-MP patterns in 1-10 tissues were shown, with color coding the same as panel E.
+
+\pagebreak
+![Figure S9. Frequency distribution of scaled difference values (between hybrid and mid-parent, i.e, D/A values) for genes that are assigned to different inheritance patterns.]($briggs/data/42_de/15.density.doa.pdf){width=100%}
+
+\pagebreak
+![Figure S10. Analysis of allele-specific expression. ]($briggs/data/44_ase/03.prop.ref.pdf){width=100%}
+
+For each sample we counted the number of reads carrying the Mo17 allele (SNP) or the B73 allele for each gene. Numbers below x-axis show the number of genes with at least 10 allele-specific reads, while y-axis gives the distribution of the B73 allele proportions for all genes in each sample. Not surprisingly, transcripts in inbred samples all carry the corresponding B73 or Mo17 allele, while genes in hybrid samples have varying levels of allele proportion but center around 50% (for endosperm, the expectation becomes 67% due to the 2:1 parental ratio).
+
+\pagebreak
+![Figure S11. Analysis of regulatory variation across tissues and developmental stages.]($briggs/data/49_coop/25.Reg.sup.pdf){width=100%}
+
+(A\) The proportion of genes classified into each pattern of regulatory variation is shown for each tissue (cis-only, trans-only, cis+trans: opposite direction, cis+trans: same direction and unexpected) in each tissue. The numbers in parentheses reflect the number of genes classified in each tissue.  (B) A non-redundant list of gene/tissue combinations of regulatory classifications was assessed.  In total there are 54,605 gene/tissue combinations with a classification for regulatory variation (DE2+).  The distribution of classifications for genes characterized by previous eQTL mapping study as cis- or trans- regulated, with varying levels of differential expression, SPE or additivity patterns were assessed.  (C) The proportion of genes under different regulatory patterns that are non-syntenic, lack any known domains (Interproscan) or lack any homologs (arabidopsis of uniprot.plants) was determined and compared to all genes, all expressed genes (i.e., genes expressed in at least one out of the total 23 tissues) and non-DE genes (genes not showing DE in any of the 23 tissues).  (D) The percentage of different regulatory patterns for the set of genes that have consistent B73 higher expression (consis. DE_B), consistent Mo17 higher expression (consis. DE_M) or a mix of B73 higher expression and Mo17 higher expression across tissues was shown.
+
+\pagebreak
+![Figure S12. Analysis of allelic bias of non-DE genes across tissues.]($briggs/data/49_coop/25.Reg2.pdf){width=70%}
+
+(A\) Proportion of genes showing B73-biased or Mo17-biased allelic expression in each tissue.  (B) DE genes between parents and hybrid are enriched in biased allelic expression in the hybrid.  Bar shows across all tissues the proportion of DE genes (AP - hybrid is above parents or BP - hybrid is below parents) or non-DE genes with conserved allelic ratio, B73-biased allelic ratio or Mo17-biased allelic ratio. 
+
+\pagebreak
+![Figure S13.  Comparison of regulatory classification approaches based on eQTL mapping and ASE analysis.]($briggs/data/49_coop/85.eQTL.pdf){width=100%}
+
+The pie-chart (left) shows the proportion of all differentially expressed genes (between the two parents) that were assigned to different regulatory mechanisms across all tissues.  The plots on the right show the enrichment or depletion (as fold change relative to background proportion from the left pie-chart) for genes that were characterized by previous eQTL study (in Shoot Apex Meristem) to be regulated by only cis-eQLT(s), only trans-eQTL(s) or by both cis-eQTL(s) and trans-eQTL(s).  The comparison was made using the ASE data from seedling meristem tissue (closest to SAM used in the eQTL analysis) as well as three other tissues (flag leaf, root and ear).  For each comparison the proportion of each regulatory classification was compared to background proportion (left pie-chart) with the ratio plotted as bars along x-axis.  P-values for each comparison were determined using hypergeometric test (lower.tail = FALSE for enrichment and lower.tail = TRUE for depletion) and labelled as "*" (P < 0.01) or "**" (P < 0.001).
+
