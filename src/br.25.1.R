@@ -1,12 +1,12 @@
 #{{{ head
 source("functions.R")
 library(ggpubr)
-library(ggridges)
+#library(ggridges)
 sid = 'me99b'
 #sid = 'me99b.m'
 dirw = file.path(dird, ifelse(sid == 'me99b.m', '49_coop_m', "49_coop"))
 genome = ifelse(sid == 'me99b.m', 'Mo17', 'B73')
-x = load(file.path(genome_dir(), genome, '55.rda'))
+genome_cfg = readRDS(file.path(genome_dir(genome), '55.rds'))
 diri = file.path(dirp, ifelse(sid == 'me99b.m', '42_de_m', "42_de"))
 fi = file.path(dirw, "01.master.rda")
 x = load(fi)
@@ -2533,4 +2533,24 @@ tm %>% filter(B73 < .1, Mo17 < .1, BxM > 1) %>%
     select(Tissue, gid, B73, Mo17, BxM, hDE, prop.h) %>% print(n=50)
 #}}}
 
+
+#{{{ test ASE with gene sequence changes
+tt = tm %>% filter(pDE == 'non_DE', !is.na(Reg2)) %>%
+    select(Tissue, gid, hDE, prop.h, Reg2)
+fv = '~/projects/wgc/data/05_stats/10.B73_Mo17.tsv'
+impacts = c("no_change","low","modifier",'moderate','high')
+tv = read_tsv(fv) %>% filter(impact %in% c("low",'modifier','moderate')) %>% select(gid, impact, eff)
+
+tt2 = tt %>% inner_join(tv, by='gid') %>%
+    #mutate(Reg2=hDE) %>%
+    mutate(impact=eff)
+tt3 = tt2 %>% count(Tissue, impact) %>% rename(n_tot = n) %>% filter(n_tot >= 100)
+tt4 = tt2 %>% count(Tissue, impact, Reg2) %>%
+    inner_join(tt3, by=c("Tissue","impact")) %>%
+    mutate(prop = n/n_tot) %>%
+    select(Tissue,impact,Reg2,prop) %>%
+    #mutate(impact = factor(impact, levels=impacts)) %>%
+    spread(Reg2, prop)
+tt4 %>% print(n=100)
+#}}}
 

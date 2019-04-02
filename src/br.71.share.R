@@ -63,7 +63,7 @@ write_tsv(to2, fo2)
 #}}}
 
 #{{{ share w. Briggs group
-dirp = '~/projects/maize.expression' 
+dirp = '~/projects/maize.expression'
 study = 'briggs'
 dirw = file.path(dirp, study, 'data')
 diri = file.path(dirp, study, 'data/raw/multiqc_data')
@@ -107,6 +107,22 @@ to = tm %>% filter(gid %in% tids) %>%
     gather(Genotype, CPM, -Tissue, -gid) %>%
     select(gid, Tissue, Genotype, CPM)
 fo = file.path(dirw, "tf_cpm.tsv")
+write_tsv(to, fo)
+#}}}
+
+#{{{ ASE for Bill
+fi = '~/projects/rnaseq/data/08_raw_output/me99b/ase.tsv'
+ase = read_tsv(fi)
+
+th1 = th %>% select(SampleID, Tissue, Genotype, Replicate)
+to = ase %>% inner_join(th1, by='SampleID') %>%
+    filter(Tissue == 'seedlingleaf_11DAS', Genotype == 'BxM') %>%
+    group_by(gid) %>%
+    summarise(n0=sum(n0),n1=sum(n1),ncft=sum(ncft)) %>%
+    ungroup() %>%
+    rename(n_B73 = n0, n_Mo17 = n1, n_ambiguous = ncft)
+
+fo = file.path(dirw, '../71_output/ase_seedlingleaf.tsv')
 write_tsv(to, fo)
 #}}}
 

@@ -1,4 +1,5 @@
-require(rmaize)
+require(devtools)
+load_all('~/git/rmaize')
 dirp = '~/projects/briggs'
 dird = file.path(dirp, 'data')
 cols17 = c(brewer.pal(8, 'Dark2'), brewer.pal(9, 'Set1'))
