@@ -16,7 +16,13 @@ tis.prop = 0.5
 #load(ftd)
 # syntenic proportion
 fsyn = '~/data/genome/B73/gene_mapping/syn.gid.tsv'
-tsyn = read_tsv(fsyn) %>% distinct(gid) %>% add_column(atag = 'syntenic')
+#tsyn = read_tsv(fsyn) %>% distinct(gid) %>% add_column(atag = 'syntenic')
+fsyn = '~/data/genome/B73/gene_mapping/sorghum3_intell_plusteff.csv'
+ti = read_csv(fsyn)
+tsyn = ti %>% select(sub1 = maize1_v4, sub2 = maize2_v4) %>%
+    gather(subgenome, gid) %>%
+    filter(gid != 'No Gene') %>%
+    distinct(gid, subgenome)
 # TF
 ftf = '~/data/genome/B73/61_functional/06.tf.tsv'
 ttf = read_tsv(ftf) %>% transmute(gid, atag = 'TF')
@@ -2552,5 +2558,22 @@ tt4 = tt2 %>% count(Tissue, impact, Reg2) %>%
     #mutate(impact = factor(impact, levels=impacts)) %>%
     spread(Reg2, prop)
 tt4 %>% print(n=100)
+#}}}
+
+#{{{ test ASE with sub-genome/synteny
+tt = tm %>% select(Tissue, gid, hDE, prop.h, Reg1, Reg2) %>%
+    mutate(tag = Reg2) %>% filter(!is.na(tag))
+#
+tt2 = tt %>% left_join(tsyn, by='gid') %>%
+    replace_na(list(subgenome='non-syntenic'))
+tt3 = tt2 %>% count(Tissue, subgenome) %>% rename(n_tot = n) %>% filter(n_tot >= 100)
+tt4 = tt2 %>% count(Tissue, subgenome, tag) %>%
+    inner_join(tt3, by=c("Tissue","subgenome")) %>%
+    mutate(prop = n/n_tot) %>%
+    select(Tissue,subgenome,tag,prop) %>%
+    #mutate(impact = factor(impact, levels=impacts)) %>%
+    spread(tag, prop)
+tt4 %>% print(n=50)
+#tt4 %>% select(Tissue,subgenome, `cis only`, `trans only`) %>% print(n=50)
 #}}}
 

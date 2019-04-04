@@ -126,3 +126,11 @@ fo = file.path(dirw, '../71_output/ase_seedlingleaf.tsv')
 write_tsv(to, fo)
 #}}}
 
+#{{{ ASE for Ruijuan
+to = tm %>% filter(!is.na(Reg1)) %>%
+    select(Tissue, gid, prop.p, prop.h, bic.c, bic.t, bic.ct, Reg1)
+
+fo = file.path(dirw, '../71_output/ase.tsv')
+write_tsv(to, fo)
+#}}}
+
