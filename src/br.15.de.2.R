@@ -1,10 +1,10 @@
-source("br.fun.r")
+source("functions.R")
 sid = 'me99b'
 #sid = 'me99b.m'
-dirw = file.path(dirp, ifelse(sid == 'me99b.m', '42_de_m', "42_de"))
 genome = ifelse(sid == 'me99b.m', 'Mo17', 'B73')
-x = load(file.path(dirg, genome, '55.rda'))
-diri = file.path(dirp, ifelse(sid == 'me99b.m', '41_qc_m', "41_qc"))
+dirw = file.path(dird, ifelse(sid == 'me99b.m', '42_de_m', "42_de"))
+gcfg = read_genome_conf(genome)
+diri = file.path(dird, ifelse(sid == 'me99b.m', '41_qc_m', "41_qc"))
 fm = file.path(diri, '10.rda')
 y = load(fm)
 fi = file.path(dirw, '10.rda')
@@ -160,50 +160,59 @@ ggsave(p1, filename = fo, width = 8, height = 9)
 #}}}
 
 #{{{ selected examples of mixed-DE patterns
-gts2 = c("B73", "Mo17")
 tpx = th %>% distinct(Tissue) %>%
     mutate(Tissue = factor(Tissue, levels = tissues23)) %>%
     arrange(Tissue) %>%
     mutate(x = 1:length(Tissue))
 
 ta = dd %>% group_by(gid) %>%
-    summarise(n.exp = n(), 
+    summarise(n.exp = n(),
               n.de.b = sum(pDE == 'DE_B'),
               n.de.m = sum(pDE == 'DE_M')) %>% ungroup()
-td = ta %>% filter(n.de.b > 4, n.de.m > 4, n.exp == 23) 
-
-to = tm %>% filter(gid %in% td$gid) %>%
+#
+gids1 = ta %>% filter(n.de.b == 0, n.de.m == 0, n.exp == 23) %>% pull(gid)
+gids2 = ta %>% filter(n.de.b == 0, n.de.m > 10, n.exp == 23) %>% pull(gid)
+gids3 = ta %>% filter(n.de.b > 10, n.de.m == 0, n.exp == 23) %>% pull(gid)
+gids4 = ta %>% filter(n.de.b > 4, n.de.m > 4, n.exp == 23) %>% pull(gid)
+gids = c(gids1, gids2, gids3, gids4)
+#
+to = tm %>% filter(gid %in% gids) %>%
     inner_join(th[,c('SampleID','Tissue','Genotype')], by = 'SampleID') %>%
     select(gid, Tissue, Genotype, CPM) %>%
-    #mutate(CPM = asinh(CPM)) %>%
     group_by(gid, Tissue, Genotype) %>%
-    summarise(cpm.me = mean(CPM), cpm.sd = sd(CPM)) %>% ungroup() #%>%
-    #mutate(cond = sprintf("%s %s", Genotype, Tissue)) %>%
-    #select(-Genotype, -Tissue) %>%
-    #spread(cond, CPM)
-fo = file.path(dirw, "30.mixed.de.tsv")
-#write_tsv(to, fo)
+    summarise(cpm.me=mean(CPM), cpm.sd = sd(CPM)) %>% ungroup()
 
-gids = td$gid[c(2,3,9,10)]
-tp = to %>% inner_join(tpx, by = 'Tissue') %>% 
-    filter(gid %in% gids, Genotype %in% gts2)
-tps = dd %>% filter(gid == !!gid, pDE != 'non_DE') %>%
-    select(Tissue, pDE) %>% mutate(y = ymax, lab = '*')
+gts = c("B73")
+gts = c("B73","Mo17",'BxM')
+gts = c("B73","Mo17")
+gids = c(gids1[c(21,252,290)], gids3[c(3,284,292)],
+         gids2[c(4,23,25)],gids4[c(159,94,110)])
+fo = sprintf("%s/31_mixed_de.%d.pdf", dirw, length(gts))
+tp = to %>%
+    mutate(Tissue = factor(Tissue, levels=tissues23)) %>%
+    inner_join(tpx, by = 'Tissue') %>%
+    filter(gid %in% gids, Genotype %in% gts) %>%
+    mutate(Genotype = factor(Genotype, levels=gts)) %>%
+    mutate(gid = factor(gid, levels=gids)) %>%
+    replace_na(list(cpm.sd=.1))
+#tps = dd %>% filter(gid %in% gids, pDE != 'non_DE') %>%
+#    select(Tissue, pDE) %>% mutate(y = ymax, lab = '*')
 p1 = ggplot(tp) +
-    geom_line(aes(x = x, y = cpm.me, color = Genotype, group = Genotype), width = .3, linetype = 'solid') +  
-    geom_pointrange(aes(x = x, y = cpm.me, ymin = cpm.me-cpm.sd, ymax = cpm.me+cpm.sd, color = Genotype, group = Genotype)) +
+    #geom_line(aes(x=x, y=cpm.me, color=Genotype, group=Genotype), width=.3, linetype='solid') +
+    geom_point(aes(x=Tissue, y=cpm.me, color=Genotype, group=Genotype), size=.8) +
+    geom_errorbar(aes(x=Tissue, ymin=cpm.me-cpm.sd, ymax=cpm.me+cpm.sd, color = Genotype, group = Genotype), width=.1, alpha=.8) +
+    geom_ribbon(aes(x=Tissue, ymin=cpm.me-cpm.sd, ymax=cpm.me+cpm.sd, fill=Genotype, group = Genotype), alpha=.3) +
     #geom_vline(xintercept = seq(1.5,22.5), alpha= .5, linetype='dotted') +
-    scale_x_continuous(name = 'Tissue', expand = expand_scale(mult=c(.03,.03))) +
-    scale_y_continuous(expand = expand_scale(mult=c(.05,.05))) +
+    scale_x_discrete(name = 'Tissue', expand = expand_scale(mult=c(.02,.02))) +
+    scale_y_continuous(name = 'CPM (Counts Per Million)', expand = expand_scale(mult=c(.05,.05))) +
     scale_fill_npg() +
     scale_color_npg() +
-    facet_wrap(~gid, scale = 'free', ncol = 2) +
-    otheme(xtitle = T, ytitle = T, ytext = T, yticks = T, ygrid = T, 
-           legend.pos = 'top.center.out') +
-    theme(plot.margin = unit(c(1.5,.5,.5,.5), "lines")) +
+    facet_wrap(~gid, scale='free_y', ncol=2, dir='v') +
+    otheme(xtext=T, xticks=T, ytitle = T, ytext = T, yticks = T, ygrid = T,
+           legend.pos = 'top.left', legend.dir='v') +
+    theme(axis.text.x=element_text(angle = 30, hjust=1, vjust=1)) +
     guides(color = guide_legend(nrow = 1, byrow = T))
-fo = sprintf("%s/31_mixed_de.pdf", dirw)
-ggsave(p1, filename = fo, width = 6, height = 5)
+ggsave(p1, filename = fo, width = 12, height = 10)
 #}}}
 
 

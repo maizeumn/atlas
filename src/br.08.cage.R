@@ -8,7 +8,7 @@ th = read_tsv(fh) %>%
 
 fi = file.path(dirw, "51.rna.quantity.tsv")
 ti = read_tsv(fi)
-colnames(ti) = c("SampleID", "total_conc", "total_mass_ng", "total_mass", 
+colnames(ti) = c("SampleID", "total_conc", "total_mass_ng", "total_mass",
                  "total_vol", "box_position", "adapter")
 sum(ti$SampleID %in% th$SampleID)
 

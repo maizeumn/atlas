@@ -14,15 +14,7 @@ tis.prop = 0.5
 # tissue distance
 #ftd = sprintf("%s/41_qc/50.tissue.dist.RData", dirp)
 #load(ftd)
-# syntenic proportion
-fsyn = '~/data/genome/B73/gene_mapping/syn.gid.tsv'
-#tsyn = read_tsv(fsyn) %>% distinct(gid) %>% add_column(atag = 'syntenic')
-fsyn = '~/data/genome/B73/gene_mapping/sorghum3_intell_plusteff.csv'
-ti = read_csv(fsyn)
-tsyn = ti %>% select(sub1 = maize1_v4, sub2 = maize2_v4) %>%
-    gather(subgenome, gid) %>%
-    filter(gid != 'No Gene') %>%
-    distinct(gid, subgenome)
+tsyn = read_syn()
 # TF
 ftf = '~/data/genome/B73/61_functional/06.tf.tsv'
 ttf = read_tsv(ftf) %>% transmute(gid, atag = 'TF')
@@ -2479,7 +2471,7 @@ fp = sprintf("%s/12.pca.DoA.pdf", dirw)
 ggsave(p1, filename = fp, width = 5.5, height = 5.5)
 #}}}
 
-#{{{# snp density v.s. DE 
+#{{{# snp density v.s. DE
 fv = '~/data/genome/Mo17/62.gene.vnt.tsv'
 tv = read_tsv(fv) %>%
     mutate(vtag = ifelse(nvnt > 0, ifelse(nvnt >= 5, 'vnt', 'svnt'), 'ident'))

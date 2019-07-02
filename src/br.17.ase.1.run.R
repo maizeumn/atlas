@@ -11,11 +11,10 @@ fm = file.path(diri, '10.rda')
 y = load(fm)
 
 dirw = file.path(dird, '44_ase')
-diri = '~/projects/rnaseq/data/08_raw_output'
-fi = file.path(diri, 'me99b', 'ase.tsv')
-ti = read_tsv(fi)
+fi = '~/projects/rnaseq/data/raw/rn18g/ase.rds'
+ta = readRDS(fi)
 
-if(1==2) {
+ase_qc <- function() {
 #{{{ ASE stats / QC
 ti1 = ti %>% inner_join(th[,1:3], by = 'SampleID') %>%
     mutate(ntc = n0+n1+ncft, nt=n0+n1, pcft=ncft/ntc, pref=n0/nt) %>%
@@ -80,7 +79,7 @@ tt = tmm %>%
     filter(B73+Mo17 >= 20, ref + alt >= 10)
     #mutate(ref = ifelse(ref+alt <= 1000, ref, round(ref*1000/(ref+alt))),
     #       alt = ifelse(ref+alt <= 1000, alt, round(alt*1000/(ref+alt))),
-    #       cft = ifelse(ref+alt <= 1000, cft, round(cft*1000/(ref+alt)))) 
+    #       cft = ifelse(ref+alt <= 1000, cft, round(cft*1000/(ref+alt))))
 tt %>% count(Tissue) %>% print(n=23)
 
 get_bic <- function(i, tt) {
@@ -89,7 +88,7 @@ get_bic <- function(i, tt) {
     x = unlist(tt$refl[i]); size = unlist(tt$refl[i]) + unlist(tt$altl[i])
     prob.h = sum(x) / sum(size)
     bicc = NA; bict = NA; bicct = NA; reg = NA
-    if(prob == 0)  
+    if(prob == 0)
         reg = ifelse(prob.h < 0.05, 'cis',
               ifelse(prob.h > 0.45 & prob.h < 0.55, 'trans', 'cis+trans'))
     else if(prob == 1)
@@ -101,21 +100,21 @@ get_bic <- function(i, tt) {
                 -sum(VGAM::dbetabinom(x, size, prob = prob, rho = rho, log = TRUE))
             else 100
         }
-        fitc = mle(LL, start = list(prob = prob, rho = 0), 
-              method = "L-BFGS-B", lower = c(1e-5,1e-5), upper = c(1-1e-5,1-1e-5), 
+        fitc = mle(LL, start = list(prob = prob, rho = 0),
+              method = "L-BFGS-B", lower = c(1e-5,1e-5), upper = c(1-1e-5,1-1e-5),
               fixed = list(prob = prob),
               nobs = length(x))
-        fitt = mle(LL, start = list(prob = prob, rho = 0), 
-              method = "L-BFGS-B", lower = c(1e-5,1e-5), upper = c(1-1e-5,1-1e-5), 
+        fitt = mle(LL, start = list(prob = prob, rho = 0),
+              method = "L-BFGS-B", lower = c(1e-5,1e-5), upper = c(1-1e-5,1-1e-5),
               fixed = list(prob = 0.5),
               nobs = length(x))
-        fit = mle(LL, start = list(prob = prob, rho = 0), 
-              method = "L-BFGS-B", lower = c(1e-5,1e-5), upper = c(1-1e-5,1-1e-5), 
+        fit = mle(LL, start = list(prob = prob, rho = 0),
+              method = "L-BFGS-B", lower = c(1e-5,1e-5), upper = c(1-1e-5,1-1e-5),
               nobs = length(x))
         #coef(fitc)
         bic = BIC(fitc, fitt, fit)
         bicc = bic$BIC[1]; bict = bic$BIC[2]; bicct = bic$BIC[3]
-        tb = as_tibble(bic) %>% 
+        tb = as_tibble(bic) %>%
             add_column(reg = c('cis', 'trans','cis+trans')) %>% arrange(BIC)
         reg = tb$reg[1]
     }
@@ -127,7 +126,7 @@ y = bplapply(1:nrow(tt), get_bic, tt, BPPARAM = bpparam)
 
 tb = do.call(rbind.data.frame, y) %>% as_tibble()
 colnames(tb) = c("bic.c", "bic.t", "bic.ct", "reg")
-tb = tb %>% mutate(bic.c = as.numeric(bic.c), 
+tb = tb %>% mutate(bic.c = as.numeric(bic.c),
                    bic.t = as.numeric(bic.t),
                    bic.ct = as.numeric(bic.ct))
 stopifnot(nrow(tb) == nrow(tt))
@@ -144,10 +143,10 @@ t_ase = ttb %>%
                  ifelse(reg == 'trans', 'trans only',
                  ifelse(reg == 'cis+trans',
                  ifelse((prop.h<prop.p & prop.h>=.5)|(prop.h>prop.p & prop.h<=.5), 'cis+trans',
-                 ifelse((prop.h<prop.p & prop.h<.5 & prop.p>.5), "trans Mo17", 
+                 ifelse((prop.h<prop.p & prop.h<.5 & prop.p>.5), "trans Mo17",
                  ifelse((prop.h>prop.p & prop.h>.5 & prop.p<.5), "trans B73",
                  ifelse((prop.h<prop.p & prop.p<.5), "cis Mo17",
-                 ifelse((prop.h>prop.p & prop.p>.5), "cis B73", "unc"))))), 
+                 ifelse((prop.h>prop.p & prop.p>.5), "cis B73", "unc"))))),
                  'unc')))) %>%
     mutate(reg = factor(reg, levels = reg_levels))
 table(t_ase$reg)
@@ -156,7 +155,7 @@ fo = sprintf("%s/10.mle.rda", dirw)
 save(t_ase, file = fo)
 #}}}
 
-if(1==2) {
+proof_concept_bb <= function() {
 #{{{ proof of concept for beta-binomial
 size = 50
 prob = 0.7
@@ -178,3 +177,34 @@ fo = file.path(dirw, 'bb.pdf')
 ggsave(p, filename = fo, width = 7, height = 5)
 #}}}
 }
+
+#{{{ get some demo data
+fm = '~/projects/briggs/data/44_ase_old/10.ase.RData'
+x = load(fm)
+tissue='root_0DAP'
+gids = t_ase %>% filter(Tissue %in% c(tissue)) %>%
+    group_by(Tissue, reg) %>%
+    slice(100:100) %>% pull(gid)
+th0 = th %>% filter(Tissue == tissue) %>% select(SampleID,Genotype,Replicate)
+
+tp1 = tm %>% filter(gid %in% gids) %>%
+    inner_join(th0, by='SampleID') %>%
+    filter(Genotype != 'BxM') %>%
+    arrange(gid, Genotype, Replicate) %>%
+    select(gid, Genotype, Replicate, ReadCount, CPM)
+
+tp2 = ta %>% filter(gid %in% gids) %>%
+    separate(sid, c('SampleID','suf'), sep='[\\.]') %>%
+    mutate(suf = ifelse(suf=='1', 'nref','nalt')) %>%
+    inner_join(th0, by='SampleID') %>%
+    filter(Genotype == 'BxM') %>%
+    spread(suf,cnt) %>%
+    arrange(gid, Genotype, Replicate) %>%
+    mutate(ncft = abs(round(rnorm(n())))) %>%
+    select(gid,Genotype,Replicate, nref,nalt,ncft)
+
+fo1 = '~/git/demo/ase/demo_parents.tsv'
+fo2 = '~/git/demo/ase/demo_f1.tsv'
+write_tsv(tp1, fo1)
+write_tsv(tp2, fo2)
+#}}}

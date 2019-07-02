@@ -1,6 +1,7 @@
 source("functions.R")
-dirw = file.path(dirp, "01.exp.design")
+dirw = file.path(dird, "01_exp_design")
 
+#{{{ 23 dev atlas * 3 genotypes
 fi = file.path(dirw, "01.tsv")
 ti = read_tsv(fi)
 ti
@@ -10,13 +11,13 @@ boxnames = c("BR_P01_Boxx", "BR_P02_Box3", "BR_P03_Box6", "BR_R01_Box1", "BR_R02
 
 to = data.frame()
 for (boxname in boxnames) {
-	fi = sprintf("%s/11_tubebox_grinding/%s.tsv", dirw, boxname)
-	ti = read.table(fi, sep="\t", header = F, as.is = T)
-	ti = cbind(rownum = rownames(ti), ti)
-	tos = reshape(ti, direction = 'long', idvar = 'rownum', varying = colnames(ti)[2:ncol(ti)], timevar = "colnum", v.names = "sid")
-	ps = strsplit(boxname, split = "_")[[1]]
-	tos = cbind(bname = ps[2], bname2 = ps[3], tos)
-	to = rbind(to, tos)
+    fi = sprintf("%s/11_tubebox_grinding/%s.tsv", dirw, boxname)
+    ti = read.table(fi, sep="\t", header = F, as.is = T)
+    ti = cbind(rownum = rownames(ti), ti)
+    tos = reshape(ti, direction = 'long', idvar = 'rownum', varying = colnames(ti)[2:ncol(ti)], timevar = "colnum", v.names = "sid")
+    ps = strsplit(boxname, split = "_")[[1]]
+    tos = cbind(bname = ps[2], bname2 = ps[3], tos)
+    to = rbind(to, tos)
 }
 to = to[to$sid != '' & !is.na(to$sid),]
 lmap = LETTERS[1:9]
@@ -135,3 +136,18 @@ ddply(tr, .(pool), summarise, nidx = length(unique(idxname)))
 fo = file.path(dirw, "39.pool2.tsv")
 #write_tsv(tr, fo)
 #}}}
+#}}}
+
+#{{{ hybrid panel sheet
+ti = crossing(Genotype=gts10, Tissue=tissues3, Rep=1:4) %>%
+    mutate(Genotype=factor(Genotype, levels=gts10)) %>%
+    mutate(Tissue=factor(Tissue, levels=tissues3)) %>%
+    arrange(Tissue, Genotype, Rep) %>%
+    mutate(SampleID = sprintf("BR%03d", 500+(1:length(Tissue)))) %>%
+    select(SampleID, everything())
+fo = file.path(dirw, '61.meta.tsv')
+write_tsv(ti, fo)
+#}}}
+
+
+

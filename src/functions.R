@@ -1,3 +1,4 @@
+#{{{
 require(devtools)
 load_all('~/git/rmaize')
 dirp = '~/projects/briggs'
@@ -23,7 +24,10 @@ tissues23 = c("seedlingleaf_11DAS", "blade_v12", "flagleaf_0DAP",
             "endosperm_27DAP", "kernel_14DAP", "endosperm_14DAP")
 tissues20 = tissues23[1:20]
 tissues2 = c("tasselstem_0DAP", "internode_v12")
-gts = c("B73", "Mo17", 'BxM')
+gts3 = c("B73", "Mo17", 'BxM')
+tissues3 = c("seedling_root", "coleoptile", "leaf_V2")
+gts10 = c("B73",'B84',"Mo17",'A682','B73xMo17','Mo17xB73',
+          'B84xB73','B84xMo17','A682xB73','A682xMo17')
 
 #require(BiocParallel)
 #bpparam <- MulticoreParam()
@@ -32,6 +36,8 @@ gts = c("B73", "Mo17", 'BxM')
 #require(WGCNA)
 ##allowWGCNAThreads()
 #enableWGCNAThreads()
+#}}}
+
 run_de_test <- function(tm1, th1) {
     #{{{
     require(DESeq2)
@@ -49,8 +55,8 @@ run_de_test <- function(tm1, th1) {
     vm.w = vm %>% select(SampleID, gid, ReadCount) %>% spread(SampleID, ReadCount)
     vm.d = column_to_rownames(as.data.frame(vm.w), var = 'gid')
     stopifnot(identical(rownames(vh.d), colnames(vm.d)))
-    #{{{ hybrid vs mid-parent 
-    hm = tm1 %>% 
+    #{{{ hybrid vs mid-parent
+    hm = tm1 %>%
         filter(gid %in% gids) %>%
         select(SampleID, gid, nRC)
     # prepare mid-parent
@@ -69,11 +75,11 @@ run_de_test <- function(tm1, th1) {
         inner_join(hm, by = c('p2'='SampleID','gid'='gid')) %>%
         transmute(SampleID = sid, gid = gid, nRC = (nRC.x+nRC.y)/2)
     hm.w = hm %>% filter(SampleID %in% sidsh) %>%
-        bind_rows(tsi2) %>% 
+        bind_rows(tsi2) %>%
         mutate(nRC = round(nRC)) %>%
-        spread(SampleID, nRC) 
+        spread(SampleID, nRC)
     hm.d = column_to_rownames(as.data.frame(hm.w), var = 'gid')
-    # 
+    #
     gts.new = rep(c('MidParent','Hybrid'), c(nrow(tsi1),length(sidsh)))
     hh = tibble(SampleID = c(tsi1$sid, sidsh), Genotype = gts.new) %>%
         mutate(Genotype = factor(Genotype)) %>%
