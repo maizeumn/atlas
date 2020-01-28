@@ -1,9 +1,15 @@
 #{{{
 require(devtools)
 load_all('~/git/rmaize')
-dirp = '~/projects/briggs'
+require(ggforce)
+require(ggpubr)
+require(ggExtra)
+dira = '~/projects/assets'
+dirp = '~/projects/atlas'
 dird = file.path(dirp, 'data')
+dirf = file.path(dird, '95_figures')
 cols17 = c(brewer.pal(8, 'Dark2'), brewer.pal(9, 'Set1'))
+cols23 = c(pal_npg()(10), pal_simpsons()(13))
 tissues23 = c("seedlingleaf_11DAS", "blade_v12", "flagleaf_0DAP",
             "auricle_v12", "sheath_v12", "husk_0DAP", "tasselstem_0DAP",
             "internode_v12", "root_0DAP", "silk_0DAP", "floret_0DAP",
@@ -22,13 +28,13 @@ tissues23 = c("seedlingleaf_11DAS", "blade_v12", "flagleaf_0DAP",
             "seedlingmeristem_11DAS",
             "embryo_27DAP", "embryo_imbibedseed",
             "endosperm_27DAP", "kernel_14DAP", "endosperm_14DAP")
+tiss23 = c("radicle_root", "seedling_root", "seedling_leaf", "seedling_meristem", "coleoptile", "auricle", "blade_leaf", "internode", "tassel", "sheath", "ear", "flag_leaf", "floret", "husk", "root", "silk", "spikelet", "tassel_stem", "endosperm14D", "kernel", "embryo", "seed_imbibed", "endosperm27D")
 tissues20 = tissues23[1:20]
 tissues2 = c("tasselstem_0DAP", "internode_v12")
 gts3 = c("B73", "Mo17", 'BxM')
 tissues3 = c("seedling_root", "coleoptile", "leaf_V2")
 gts10 = c("B73",'B84',"Mo17",'A682','B73xMo17','Mo17xB73',
           'B84xB73','B84xMo17','A682xB73','A682xMo17')
-
 #require(BiocParallel)
 #bpparam <- MulticoreParam()
 #bplog(bpparam) <- T
@@ -38,6 +44,8 @@ gts10 = c("B73",'B84',"Mo17",'A682','B73xMo17','Mo17xB73',
 #enableWGCNAThreads()
 #}}}
 
+cap_bigint <- function(x, int.max=2147483647) ifelse(x>int.max, int.max, x)
+trim_range <- function(x, range.min=-2147483647, range.max=2147483647) ifelse(x>range.max, range.max, ifelse(x<range.min, range.min, x))
 run_de_test <- function(tm1, th1) {
     #{{{
     require(DESeq2)
@@ -141,7 +149,7 @@ run_de_test <- function(tm1, th1) {
     t_cpm = cpm(y, normalized.lib.sizes = T) %>% as_tibble() %>%
         mutate(gid = gids) %>%
         gather(sid, cpm, -gid) %>% select(sid, gid, cpm)
-    # mb, hb, hm, fm 
+    # mb, hb, hm, fm
     lrt1 = glmLRT(fit, contrast = c(-1, 0, 1))
     lrt2 = glmLRT(fit, contrast = c(-1, 1, 0))
     lrt3 = glmLRT(fit, contrast = c(0, -1, 1))
@@ -192,18 +200,81 @@ plot_deseq2 <- function(dds, dirw, tissue) {
     pdf(fp, width=5, height=5)
     plotPCA(rld, intgroup = "Genotype", ntop = 10000)
     dev.off()
-#
+    #
     fp = sprintf("%s/03_disp/%s.pdf", dirw, tissue)
     pdf(fp, width=5, height=5)
     plotDispEsts(dds)
     dev.off()
-#    
+    #
     resLFC = lfcShrink(dds, coef = 2)
     fp = sprintf("%s/05_ma/%s.pdf", dirw, tissue)
     pdf(fp, width=5, height=5)
     plotMA(resLFC, ylim = c(-3,3))
     dev.off()
     #}}}
+}
+call_de_dom <- function(t_de, tmm) {
+#{{{ call pDE, hDE, D/A, Dom
+tm1 = tmm %>% select(Tissue, Genotype, gid, CPM) %>%
+    spread(Genotype, CPM) %>%
+    mutate(LP = pmin(B73, Mo17),
+           HP = pmax(B73, Mo17),
+           MP = (B73 + Mo17) / 2,
+           DoA = (BxM - MP) / (HP - MP)) %>%
+    select(Tissue, gid, B73, Mo17, BxM, DoA) %>%
+    mutate(DoA = ifelse(is.nan(DoA)|is.infinite(DoA), NA, DoA))
+summary(tm1$DoA)
+#
+pDEs = c("DE_B", "DE_M", "non_DE")
+tm2 = t_de %>% select(Tissue, deseq) %>% unnest() %>%
+    #replace_na(list(log2MB = 0, log2HB = 0, log2HM = 0, log2FM = 0)) %>%
+    mutate(tag.mb = ifelse(padj.mb < .01, ifelse(log2mb < 0, -1, 1), 0),
+           tag.hb = ifelse(padj.hb < .01, ifelse(log2hb < 0, -1, 1), 0),
+           tag.hm = ifelse(padj.hm < .01, ifelse(log2hm < 0, -1, 1), 0),
+           tag.fm = ifelse(padj.fm < .01, ifelse(log2fm < 0, -1, 1), 0)) %>%
+    mutate(pDE = ifelse(is.na(tag.mb), NA,
+                 ifelse(tag.mb == -1, 'DE_B',
+                 ifelse(tag.mb == 1, 'DE_M', 'non_DE')))) %>%
+    mutate(pDE = factor(pDE, levels = pDEs))
+tm2 %>% group_by(Tissue) %>%
+    summarise(ng.tot = n(), ng.b = sum(tag.mb==-1), ng.m = sum(tag.mb==1),
+              pg.b = ng.b/ng.tot, pg.m = ng.m/ng.tot) %>%
+    print(n=23)
+summary(tm2$log2mb)
+summary(tm2$log2hm)
+#
+doms = c("BLP", "LP", "PD_L", "MP", "PD_H", "HP", "AHP")
+tm3 = tm2 %>%
+    filter(tag.mb != 0) %>%
+    mutate(tag.lp = ifelse(log2mb > 0, tag.hb, tag.hm),
+           tag.hp = ifelse(log2mb > 0, tag.hm, tag.hb)) %>%
+    mutate(Dom = "MP") %>%
+    mutate(Dom = ifelse(tag.fm == -1 & tag.lp == -1, 'BLP', Dom)) %>%
+    mutate(Dom = ifelse(tag.fm == -1 & tag.lp == 0, 'LP', Dom)) %>%
+    mutate(Dom = ifelse(tag.fm == -1 & tag.lp == 1, 'PD_L', Dom)) %>%
+    mutate(Dom = ifelse(tag.fm == 1 & tag.hp == -1, 'PD_H', Dom)) %>%
+    mutate(Dom = ifelse(tag.fm == 1 & tag.hp == 0, 'HP', Dom)) %>%
+    mutate(Dom = ifelse(tag.fm == 1 & tag.hp == 1, 'AHP', Dom)) %>%
+    mutate(Dom = factor(Dom, levels = doms)) %>%
+    select(Tissue, gid, Dom)
+tm3 %>% dplyr::count(Tissue, Dom) %>% spread(Dom, n) %>% print(n=23)
+#
+doms2 = c("BP", "PL", "AP")
+tm4 = tm2 %>%
+    filter(tag.mb == 0) %>%
+    mutate(hDE = "PL") %>%
+    mutate(hDE = ifelse(tag.fm+tag.hb+tag.hm == -3, "BP", hDE)) %>%
+    mutate(hDE = ifelse(tag.fm+tag.hb+tag.hm == 3, "AP", hDE)) %>%
+    mutate(hDE = factor(hDE, levels = doms2)) %>%
+    select(Tissue, gid, hDE)
+tm4 %>% dplyr::count(Tissue, hDE) %>% spread(hDE, n) %>% print(n=23)
+#
+tx = tm1 %>% left_join(tm2, by = c('Tissue', 'gid')) %>%
+    left_join(tm3, by = c('Tissue', 'gid')) %>%
+    left_join(tm4, by = c('Tissue', 'gid'))
+tx %>% dplyr::count(pDE, Dom, hDE)
+tx
+#}}}
 }
 get_cormatrix <- function(expr) {
     #{{{
