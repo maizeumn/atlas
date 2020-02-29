@@ -71,6 +71,7 @@ run_de_test <- function(tm1, th1) {
     sids1 = th1 %>% filter(Genotype == 'B73') %>% pull(SampleID)
     sids2 = th1 %>% filter(Genotype == 'Mo17') %>% pull(SampleID)
     sidsh = th1 %>% filter(Genotype == 'BxM') %>% pull(SampleID)
+    if(length(sidsh)==0) sidsh = th1 %>% filter(Genotype == 'MxB') %>% pull(SampleID)
     np1 = length(sids1); np2 = length(sids2)
     if(np1 < np2) sids1 = c(sids1, sample(sids1, np2-np1, replace = T))
     if(np1 > np2) sids2 = c(sids2, sample(sids2, np1-np2, replace = T))
@@ -215,18 +216,18 @@ plot_deseq2 <- function(dds, dirw, tissue) {
 }
 call_de_dom <- function(t_de, tmm) {
 #{{{ call pDE, hDE, D/A, Dom
-tm1 = tmm %>% select(Tissue, Genotype, gid, CPM) %>%
+tm1 = tmm %>% select(batch, Tissue, Genotype, gid, CPM) %>%
     spread(Genotype, CPM) %>%
     mutate(LP = pmin(B73, Mo17),
            HP = pmax(B73, Mo17),
            MP = (B73 + Mo17) / 2,
            DoA = (BxM - MP) / (HP - MP)) %>%
-    select(Tissue, gid, B73, Mo17, BxM, DoA) %>%
+    select(batch, Tissue, gid, B73, Mo17, BxM, DoA) %>%
     mutate(DoA = ifelse(is.nan(DoA)|is.infinite(DoA), NA, DoA))
 summary(tm1$DoA)
 #
 pDEs = c("DE_B", "DE_M", "non_DE")
-tm2 = t_de %>% select(Tissue, deseq) %>% unnest() %>%
+tm2 = t_de %>% select(batch, Tissue, deseq) %>% unnest(deseq) %>%
     #replace_na(list(log2MB = 0, log2HB = 0, log2HM = 0, log2FM = 0)) %>%
     mutate(tag.mb = ifelse(padj.mb < .01, ifelse(log2mb < 0, -1, 1), 0),
            tag.hb = ifelse(padj.hb < .01, ifelse(log2hb < 0, -1, 1), 0),
@@ -236,7 +237,7 @@ tm2 = t_de %>% select(Tissue, deseq) %>% unnest() %>%
                  ifelse(tag.mb == -1, 'DE_B',
                  ifelse(tag.mb == 1, 'DE_M', 'non_DE')))) %>%
     mutate(pDE = factor(pDE, levels = pDEs))
-tm2 %>% group_by(Tissue) %>%
+tm2 %>% group_by(batch,Tissue) %>%
     summarise(ng.tot = n(), ng.b = sum(tag.mb==-1), ng.m = sum(tag.mb==1),
               pg.b = ng.b/ng.tot, pg.m = ng.m/ng.tot) %>%
     print(n=23)
@@ -257,7 +258,7 @@ tm3 = tm2 %>%
     mutate(Dom = ifelse(tag.fm == 1 & tag.hp == 1, 'AHP', Dom)) %>%
     mutate(Dom = factor(Dom, levels = doms)) %>%
     select(Tissue, gid, Dom)
-tm3 %>% dplyr::count(Tissue, Dom) %>% spread(Dom, n) %>% print(n=23)
+tm3 %>% dplyr::count(batch, Tissue, Dom) %>% spread(Dom, n) %>% print(n=23)
 #
 doms2 = c("BP", "PL", "AP")
 tm4 = tm2 %>%
@@ -266,12 +267,12 @@ tm4 = tm2 %>%
     mutate(hDE = ifelse(tag.fm+tag.hb+tag.hm == -3, "BP", hDE)) %>%
     mutate(hDE = ifelse(tag.fm+tag.hb+tag.hm == 3, "AP", hDE)) %>%
     mutate(hDE = factor(hDE, levels = doms2)) %>%
-    select(Tissue, gid, hDE)
-tm4 %>% dplyr::count(Tissue, hDE) %>% spread(hDE, n) %>% print(n=23)
+    select(batch,Tissue, gid, hDE)
+tm4 %>% dplyr::count(batch, Tissue, hDE) %>% spread(hDE, n) %>% print(n=23)
 #
-tx = tm1 %>% left_join(tm2, by = c('Tissue', 'gid')) %>%
-    left_join(tm3, by = c('Tissue', 'gid')) %>%
-    left_join(tm4, by = c('Tissue', 'gid'))
+tx = tm1 %>% left_join(tm2, by = c('batch','Tissue', 'gid')) %>%
+    left_join(tm3, by = c('batch','Tissue', 'gid')) %>%
+    left_join(tm4, by = c('batch','Tissue', 'gid'))
 tx %>% dplyr::count(pDE, Dom, hDE)
 tx
 #}}}

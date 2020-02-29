@@ -69,7 +69,6 @@ dev.off()
 }}}
 
 #{{{ camoco clusters
-}}}
 fc = file.path(dirw, "51.camoco/clusters.csv")
 tc = read.table(fc, sep = ",", header = T, as.is = T)
 tc$cluster = tc$cluster + 1

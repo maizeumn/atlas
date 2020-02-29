@@ -65,7 +65,7 @@ ti = res$cp
 tps = th %>% select(sid=SampleID,Genotype,Replicate) %>% arrange(Genotype) %>%
     mutate(y = 1:n())
 tp = ti %>% inner_join(tx, by='rid') %>%
-    mutate(start=start+off, end=end+off) %>%
+    mutate(gstart=start+off, gend=end+off) %>%
     inner_join(tps, by='sid')
 tz = ti %>% mutate(size=end-start) %>% group_by(sid, gt) %>%
     summarise(size = sum(size)) %>%
@@ -83,7 +83,7 @@ ty = tps %>% group_by(Genotype) %>% summarise(y=mean(y)) %>% ungroup() %>%
     mutate(col=ifelse(Genotype %in% gts, tcol, 'black')) %>%
     inner_join(tz, by='Genotype') %>% mutate(lab=sprintf("%.1f", a*100))
 p = ggplot(tp) +
-    geom_rect(aes(xmin=start,xmax=end,ymin=y-.3,ymax=y+.4, fill=gt)) +
+    geom_rect(aes(xmin=gstart,xmax=gend,ymin=y-.3,ymax=y+.4, fill=gt)) +
     geom_text(data=ty, aes(x=xmax+5e6,y=y, label=lab), hjust=0, size=2.5, color=ty$col) +
     scale_x_continuous(breaks=tx$gpos, labels=tx$chrom, expand=expand_scale(mult=c(.001,.03))) +
     scale_y_continuous(breaks=ty$y, labels=ty$Genotype, expand=expand_scale(mult=c(.001,.001))) +

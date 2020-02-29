@@ -210,7 +210,7 @@ fo = file.path(dirw, '07.cpm.cor.tsv')
 write_tsv(to, fo)
 #}}}
 
-#{{{ hclust 
+#{{{ hclust
 cor_opt = "pearson"
 #cor_opt = "spearman"
 hc_opt = "ward.D"
