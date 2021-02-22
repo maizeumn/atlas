@@ -4,7 +4,7 @@ library(ggpubr)
 #library(ggridges)
 sid = 'me99b'
 #sid = 'me99b.m'
-dirw = file.path(dird, ifelse(sid == 'me99b.m', '49_coop_m', "49_coop"))
+dirw = file.path(dird, ifelse(sid == 'me99b.m', '19_coop_m', "19_coop"))
 genome = ifelse(sid == 'me99b.m', 'Mo17', 'B73')
 genome_cfg = readRDS(file.path(genome_dir(genome), '55.rds'))
 diri = file.path(dirp, ifelse(sid == 'me99b.m', '42_de_m', "42_de"))
@@ -54,6 +54,7 @@ p1 = ggdraw()
 #}}}
 
 #{{{ p2 - #genes expressed in 0-23 tissues
+tm %>% count(Tissue,silent) %>% spread(silent,n) %>% pull(`0`) %>% mean()
 tp = tsh_e %>% group_by(n.tis, etag) %>%
     summarise(num_genes = n())
 cat("genes expressed in >=1 tissues:\n")

@@ -284,6 +284,13 @@ colnames(tx2)[4:ncol(tx2)] = str_c("p.", colnames(tx2)[4:ncol(tx2)])
 tx = tx1 %>% inner_join(tx2, by=c('tissue','gid')) %>%
     mutate(pnl = sprintf("b%02d_%s", batch, tissue))
 
+#{{{ share w. Zach & Erika
+to = tx %>% select(batch, tissue, gid, rna.DE=m.pDE, protein.DE=p.pDE) %>%
+    arrange(batch, tissue, gid)
+fo = file.path(dirw, '06.rna.protein.DE.tsv.gz')
+write_tsv(to, fo, na='')
+#}}}
+
 #{{{ pDE
 tp = tx %>% count(pnl,m.pDE, p.pDE) %>% filter(!is.na(p.pDE)) %>%
     mutate(m.pDE = as.character(m.pDE), p.pDE = as.character(p.pDE)) %>%
@@ -354,7 +361,15 @@ fo = file.path(dirw, "13.pde.density.pdf")
 ggsave(p2a, file=fo, width=10, height=7)
 #}}}
 
+batches_bad = c(2,5,7,9)
 #{{{ kernel density
+tx2 = tx %>% filter(!is.na(m.pDE), !is.na(p.pDE)) %>%
+    filter(m.pDE != 'non_DE') %>%
+    filter(! batch %in% batches_bad)
+    #filter(p.pDE != 'non_DE')
+lmod = lm(p.log2mb ~ m.log2mb, data = tx2)
+summary(lmod)
+summary(lmod)$adj.r.squared
 require(hexbin)
 fc=3
 tp = tx %>% filter(!is.na(m.pDE), !is.na(p.pDE)) %>%
@@ -378,6 +393,51 @@ fo = file.path(dirw, "13.pde.kernel.pdf")
 ggsave(pg, file=fo, width=6, height=6)
 #}}}
 
+#{{{ DE calling reproducible
+tis_eval = c('embryo','kernel','endosperm14D','endosperm27D')
+tr = tx %>% filter(tissue %in% tis_eval) %>%
+    mutate(batch = ifelse(batch %in% c(1,4,6,8), 'b1', 'b2')) %>%
+    select(tissue,batch,gid,p.pDE,p.log2mb) %>%
+    pivot_wider(names_from=batch, values_from=c(p.pDE,p.log2mb)) %>%
+    filter(!is.na(p.pDE_b1), !is.na(p.pDE_b2), p.pDE_b1 != 'non_DE') %>%
+    rename(b1 = 5, b2 = 6)
+lmod = lm(b1 ~ b2, data = tr)
+summary(lmod)
+summary(lmod)$adj.r.squared
+#{{{ kernel density
+fc=3
+tp = tr %>%
+    mutate(b1 = trim_range(b1, -fc, fc)) %>%
+    mutate(b2 = trim_range(b2, -fc, fc))
+pg = ggplot(tp, aes(b1, b2)) +
+    geom_hex(bins=80) +
+    scale_fill_viridis() +
+    #stat_density_2d(aes(fill = ..density..), geom="raster", contour=F) +
+    #scale_fill_distiller(palette=4, direction=1) +
+    scale_x_continuous(name='batch A log2(M/B)', limits=c(-fc,fc)) +
+    scale_y_continuous(name='batch B log2(M/B)', limits=c(-fc,fc)) +
+    geom_vline(xintercept = 0, linetype = 'dashed') +
+    geom_hline(yintercept = 0, linetype = 'dashed') +
+    #scale_color_npg(name = 'mRNA DE btw. B & M') +
+    otheme(xtitle=T,ytitle=T,xtext=T,ytext=T,xtick=T,ytick=T,
+           legend.pos='top.center.out', legend.dir='h', legend.vjust=-.3,
+           legend.title=T, margin=c(.2,.2,.2,.2))
+fo = file.path(dirw, "13.pde.repeat.pdf")
+ggsave(pg, file=fo, width=6, height=6)
+#}}}
+
+#{{{ barplot
+    group_by(tissue, batch, p.pDE) %>%
+    summarise(gids = list(gid)) %>% ungroup() %>%
+    spread(batch, gids) %>%
+    mutate(n1 = map_int(b1, length)) %>%
+    mutate(n2 = map_int(b2, length)) %>%
+    mutate(n12 = map2_int(b1, b2, get_ovlp <- function(x,y) sum(x %in% y))) %>%
+    mutate(pct_ovlp = n12 / n1) %>%
+    select(tissue, p.pDE, n1, n2, n12, pct_ovlp) %>%
+    print(n=20)
+#}}}
+#}}}
 #}}}
 
 #{{{ hDE
@@ -424,8 +484,9 @@ ggarrange(p2a, p2b,
 #}}}
 
 #{{{ all tissues
+tissues_rm = c("endosperm14D",'endosperm27D','kernel')
 fc = 3
-tp = tx %>%
+tp = tx %>% filter(! tissue %in% tissues_rm) %>%
     filter(!is.na(m.Dom), m.Dom != 'MP') %>%
     mutate(m.log2fm = trim_range(m.log2fm, -fc, fc)) %>%
     mutate(p.log2fm = trim_range(p.log2fm, -fc, fc))
@@ -436,12 +497,12 @@ p = ggplot(tp, aes(m.log2fm, p.log2fm)) +
     scale_x_continuous(name='mRNA log2(hybrid/midparent)', limits=c(-fc,fc)) +
     scale_y_continuous(name='protein log2(hybrid/midparent)', limits=c(-fc,fc)) +
     scale_color_npg(name = 'F1 level for DE genes') +
-    facet_wrap(~pnl, ncol=5) +
+    facet_wrap(~pnl, ncol=3) +
     otheme(xtitle=T,ytitle=T,xtext=T,ytext=T,xtick=T,ytick=T,
            legend.pos='top.center.out', legend.dir='h', legend.vjust=-.3,
            legend.title=T, margin=c(1.5,.2,.2,.2))
 fo = file.path(dirw, "15.hde.density.pdf")
-ggsave(p, file=fo, width=10, height=7)
+ggsave(p, file=fo, width=7, height=7)
 #}}}
 
 #{{{ kernel density
@@ -544,16 +605,49 @@ ggsave(p1, file=fo, width=5, height=5)
 
 #}}}
 
-opt = 'Mo17_only'
-gids = res$tg %>% filter(note==opt) %>% pull(gid)
-res$itt %>% filter(gid %in% gids, note==opt) %>%
+
+#{{{ protein ASE
+fi = file.path(dirw, '01.rds')
+x = readRDS(fi)
+tg = x$tg
+tg %>% select(gid,note) %>% spread(note, -gid) %>% count(shared, B73_only, Mo17_only, Mo17_unique)
+
+notes = c("B73_only",'Mo17_only')
+tt = x$itt %>% filter(note %in% notes) %>%
     inner_join(res$th, by='sid') %>% replace_na(list(rep=1)) %>%
+    filter(genotype != 'pool') %>%
     mutate(gt = str_c(genotype, rep, sep='_')) %>%
-    filter(tissue=='coleoptile') %>%
-    select(gid,gt,itt) %>% spread(gt, itt) %>% print(n=150)
+    spread(note, itt) %>%
+    rename(ittB = B73_only, ittM = Mo17_only) %>%
+    replace_na(list(ittB = 0, ittM  = 0))
+
+tp = tt %>%
+    mutate(tissue = ifelse(is.na(stage), tissue, str_c(tissue,stage,sep=''))) %>%
+    mutate(sid = str_c(tissue,batch,genotype,rep,sep="_")) %>%
+    filter(ittB+ittM>0) %>%
+    mutate(diffBM = asinh(ittB) - asinh(ittM)) %>%
+    mutate(prop.B = ittB / (ittB + ittM))
+tps = tp %>% count(sid) %>% mutate(lab = sprintf("%s (%d)", sid, n)) %>%
+    arrange(sid)
+tp = tp %>% inner_join(tps, by='sid') %>%
+    mutate(lab = factor(lab, levels=rev(tps$lab)))
+
+ort = 'horizontal'
+val.col = 'genotype'; val.fill = 'white'; pal.col='aaas'
+p = ggboxplot(tp, x='lab', y='prop.B', color=val.col, fill=val.fill,
+              orientation=ort, palette = pal.col,
+              outlier.shape = NA, bxp.errorbar = T) +
+    geom_hline(yintercept = .5, color='black',linetype='dashed') +
+    #scale_x_discrete(breaks=tps$lab, labels=tps$labn) +
+    scale_y_continuous(name='proportion B73 allele',expand=expansion(mult=c(.02,.02))) +
+    otheme(xtext=T, ytext=T, xtick=T, ytick=T, xtitle=T) +
+    guides(color=F, fill=F)
+fo = file.path(dirw, '50.ase.pdf')
+ggsave(p, file=fo, width=8, height=12)
+#}}}
 
 
-#{{{ coleoptile
+#{{{ #[obsolete] coleoptile
 #{{{ read protein table
 fi = file.path(diri, 'spectro_mills.xlsx')
 ti = read_xlsx(fi, "coleoptile_tip") %>%

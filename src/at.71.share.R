@@ -6,8 +6,14 @@ x = load(fi)
 tis.prop = .5
 #}}}
 
+#{{{ full DEG list
+to = tm %>% select(Tissue, gid, log2mb, tagDE = pDE)
+fo = file.path(dird, "71_share", "01.DEG.tsv")
+write_tsv(to, fo)
+#}}}
+
 #{{{ tissue-specific DE/SPE
-dirw = file.path(dirp, "71_output")
+dirw = file.path(dird, "71_share")
 
 to1 = tsh_d %>% filter(ctag == 'pDE', n.tis.tot >= 10) %>%
     transmute(gid = gid, tag = as.character(tsTag)) %>%
@@ -135,3 +141,12 @@ fo = file.path(dirw, '../71_share/ase.tsv')
 write_tsv(to, fo, na='')
 #}}}
 
+#{{{ dom for Yi-Hsuan
+fm = glue('{dird}/15_de/11.de.dom.rda')
+y = load(fm)
+to = dd %>% filter(!is.na(Dom))
+
+to %>% count(Tissue,Dom)
+fo = glue("{dird}/71_share/dom.tsv")
+write_tsv(to, fo, na='')
+#}}}

@@ -1,10 +1,10 @@
 source("functions.R")
 sid = 'me99b'
 #sid = 'me99b.m'
-dirw = file.path(dirp, ifelse(sid == 'me99b.m', '49_coop_m', "49_coop"))
+dirw = file.path(dird, ifelse(sid == 'me99b.m', '19_coop_m', "19_coop"))
 genome = ifelse(sid == 'me99b.m', 'Mo17', 'B73')
 x = load(file.path(dirg, genome, '55.rda'))
-diri = file.path(dirp, ifelse(sid == 'me99b.m', '42_de_m', "42_de"))
+diri = file.path(dird, ifelse(sid == 'me99b.m', '15_de_m', "15_de"))
 fm = file.path(diri, '11.de.dom.rda')
 y = load(fm)
 fi = file.path(dirw, "../44_ase/11.ase.rda")

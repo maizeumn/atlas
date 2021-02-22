@@ -76,7 +76,7 @@ tz = ti %>% mutate(size=end-start) %>% group_by(sid, gt) %>%
     inner_join(tps, by='sid') %>% arrange(Genotype) %>%
     filter(Replicate==1) %>% select(-y)
 
-xmax = max(tp$end)
+xmax = max(tp$gend)
 gts = c("B73","Mo17","M0021","M0317","M0014","M0016")
 tcol = pal_startrek()(1)
 ty = tps %>% group_by(Genotype) %>% summarise(y=mean(y)) %>% ungroup() %>%
