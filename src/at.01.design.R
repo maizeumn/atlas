@@ -108,6 +108,7 @@ ggsave(p, file=fo, width=8, height=4)
 #}}}
 
 
+
 #{{{ make B,M,F1 similarity diagram
 require(diagram)
 
@@ -170,4 +171,5 @@ to = crossing(Genotype = ti$Genotype, Replicate=1:4) %>%
 fo = file.path(dirw, "71.BR7.meta.tsv")
 write_tsv(to, fo, na = '')
 #}}}
+
 
