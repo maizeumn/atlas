@@ -1,1 +1,83 @@
-/home/springer/zhoux379/git/appconfig/gitignore
+# Project directories
+cache
+logs
+
+# data folder
+data/*
+!data/11_qc
+
+# app temp files
+.snakemake/*
+*.snakemake
+*Rhistory
+*Rplots.pdf
+*.swp
+.panfs*
+
+# nextflow
+.nextflow*
+raw
+results
+work
+pipeline_info
+
+# Large data files
+job.out
+*.gff
+*.bed
+*.fasta
+*.chain
+*.fas
+*.bam
+*.gff3
+*.fastq
+*.sam
+#*.o*
+#*.e*
+*.vcf
+*.bcf
+*.tbi
+*.csi
+*.idx
+*.storable
+*.RData
+*.rda
+*.rds
+*.bak
+*.phy*
+
+# Compiled source #
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.pyc
+
+# Packages #
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases #
+*.log
+*.sql
+*.sqlite
+*=
+
+# OS generated files #
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon
+Icon?
+ehthumbs.db
+Thumbs.db
